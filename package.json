@@ -1,0 +1,13 @@
+{
+  "name": "atelier-villa-backend",
+  "version": "1.0.0",
+  "description": "Backend pour l'outil Atelier Villa (fiches PDF de villas) — catalogue en base SQLite + génération de texte IA sécurisée.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --experimental-sqlite server.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "license": "UNLICENSED"
+}

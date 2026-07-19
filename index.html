@@ -1,0 +1,1995 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Fiche Villa — Générateur PDF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,500;1,600&family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Marcellus&family=Lato:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root{
+    --navy:#2A2018;--navy-deep:#17110C;--sand:#F4ECDD;--stone:#DDD0B5;
+    --gold:#B4915A;--gold-light:#D8B87E;--olive:#8A6F52;--ink:#2B2A28;
+    --page-w:794px;--page-h:1123px;
+    --preview-scale:0.62;
+    --serif-font:'Fraunces',var(--serif-font);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--navy-deep);font-family:'Lato',sans-serif;color:var(--ink);}
+
+  .topnav{display:flex;align-items:center;gap:6px;padding:14px 24px;background:var(--navy-deep);border-bottom:1px solid rgba(201,183,138,.2);}
+  .topnav .brand{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.16em;color:var(--stone);text-transform:uppercase;margin-right:18px;}
+  .navbtn{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--stone);background:transparent;border:1px solid rgba(201,183,138,.3);padding:8px 16px;border-radius:20px;cursor:pointer;transition:all .15s;}
+  .navbtn.on{background:var(--gold);border-color:var(--gold);color:var(--navy-deep);}
+  .navbtn:hover:not(.on){border-color:var(--gold-light);color:var(--gold-light);}
+
+  .app{display:flex;min-height:calc(100vh - 53px);}
+  @media (max-width:980px){.app{flex-direction:column;}}
+  .form-panel{width:420px;flex:0 0 420px;background:var(--sand);padding:36px 32px 60px;overflow-y:auto;max-height:calc(100vh - 53px);}
+  .form-panel h1.title{color:var(--navy);}
+  .form-panel label{color:var(--navy);}
+  .form-panel .status-line{color:var(--olive);}
+  .form-panel .hint{color:#8a7f68;}
+  .form-panel .subtab-btn{color:#9c9280;}
+  .form-panel .subtab-btn.on{color:var(--navy);}
+  .form-panel .subtabs{border-bottom-color:var(--stone);}
+  .form-panel .section-label::after{background:var(--stone);}
+  @media (max-width:980px){.form-panel{width:100%;flex:none;max-height:none;}}
+  .kicker{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--olive);margin-bottom:6px;}
+  h1.title{font-family:var(--serif-font);font-weight:500;font-style:italic;font-size:34px;line-height:1.05;letter-spacing:.01em;color:var(--navy);margin:0 0 6px;}
+  .status-line{font-size:11.5px;color:var(--olive);margin-bottom:22px;font-style:italic;}
+  .section-label{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:26px 0 10px;display:flex;align-items:center;gap:10px;}
+  .section-label::after{content:"";flex:1;height:1px;background:var(--stone);}
+  label{display:block;font-size:12px;color:var(--navy);margin:14px 0 5px;font-weight:500;}
+  input[type=text],input[type=number],input[type=tel],input[type=email],textarea{width:100%;padding:10px 12px;border:1px solid var(--stone);border-radius:2px;background:#fff;font-family:'Lato',sans-serif;font-size:14px;color:var(--ink);outline:none;transition:border-color .15s;}
+  input:focus,textarea:focus{border-color:var(--gold);}
+  textarea{resize:vertical;min-height:80px;line-height:1.4;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+  .chip{display:flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--stone);border-radius:20px;font-size:12.5px;cursor:pointer;background:#fff;user-select:none;transition:all .15s;}
+  .chip input{display:none;}
+  .chip.on{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .dropzone{border:1.5px dashed var(--stone);border-radius:3px;padding:18px;text-align:center;font-size:12.5px;color:#7a7264;cursor:pointer;background:#fff;margin-top:6px;}
+  .dropzone.disabled{opacity:.45;pointer-events:none;}
+  .dropzone:hover{border-color:var(--gold);}
+  .thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .thumb{position:relative;width:64px;height:64px;border-radius:2px;overflow:hidden;border:1px solid var(--stone);}
+  .thumb img{width:100%;height:100%;object-fit:cover;}
+  .thumb.logo-thumb img{object-fit:contain;background:#12202f;}
+  .thumb .rm{position:absolute;top:0;right:0;background:rgba(26,20,15,.85);color:#fff;width:18px;height:18px;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .toggle-row{display:flex;background:#fff;border:1px solid var(--stone);border-radius:20px;overflow:hidden;margin-top:8px;}
+  .toggle-opt{flex:1;text-align:center;padding:10px 8px;font-size:12px;cursor:pointer;color:var(--navy);transition:all .15s;}
+  .toggle-opt.on{background:var(--navy);color:var(--gold-light);font-weight:500;}
+  .btn-row{display:flex;gap:10px;margin-top:34px;}
+  .generate-btn{flex:1;padding:16px;border:none;border-radius:2px;background:var(--navy);color:var(--gold-light);font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:background .15s;}
+  .generate-btn:hover{background:var(--navy-deep);}
+  .generate-btn.secondary{background:#fff;color:var(--navy);border:1px solid var(--navy);}
+  .generate-btn.secondary:hover{background:var(--stone);}
+  .generate-btn:disabled{opacity:.6;cursor:wait;}
+  .hint{font-size:11px;color:#8a8272;margin-top:10px;line-height:1.5;}
+
+  .preview-panel{flex:1;display:flex;flex-direction:column;align-items:center;gap:34px;padding:44px 20px 80px;overflow:auto;max-height:calc(100vh - 53px);}
+  .preview-panel > div{flex-shrink:0;}
+  .preview-label{font-family:'Space Mono',monospace;color:var(--stone);font-size:11px;letter-spacing:.16em;text-transform:uppercase;align-self:flex-start;margin-left:calc(50% - (var(--page-w)*var(--preview-scale))/2);}
+  .page-scale-wrap{width:calc(var(--page-w)*var(--preview-scale));height:calc(var(--page-h)*var(--preview-scale));overflow:hidden;border-radius:2px;box-shadow:0 30px 60px -20px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.05);}
+  .page-scale-inner{width:var(--page-w);height:var(--page-h);transform:scale(var(--preview-scale));transform-origin:top left;}
+  #zoomBar{position:fixed;right:20px;bottom:20px;z-index:40;display:flex;align-items:center;gap:2px;background:rgba(10,10,10,.92);border:1px solid rgba(201,183,138,.35);border-radius:24px;padding:5px 6px;box-shadow:0 10px 30px -8px rgba(0,0,0,.6);}
+  #zoomBar button{width:32px;height:32px;border:none;border-radius:50%;background:transparent;color:var(--gold-light);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;}
+  #zoomBar button:hover{background:rgba(201,183,138,.18);}
+  #zoomBar .zoom-val{min-width:48px;text-align:center;font-family:'Space Mono',monospace;font-size:12px;color:var(--stone);cursor:pointer;user-select:none;}
+  #zoomBar .zoom-val:hover{color:var(--gold-light);}
+
+  /* ----- Panneau "Style du texte" ----- */
+  .ts-toggle{display:flex;align-items:center;gap:8px;margin:22px 0 0;font-size:13px;color:#8f8574;cursor:pointer;user-select:none;padding:8px 2px;border-top:1px solid var(--stone);padding-top:16px;}
+  .ts-toggle .ts-t{font-family:var(--serif-font);font-style:italic;font-size:17px;color:#7a6f58;line-height:1;}
+  .ts-toggle .ts-caret{margin-left:auto;color:#b7ab93;font-size:12px;}
+  .ts-toggle.field{margin:7px 0 0;padding:9px 2px 0;border-top:1px dashed var(--stone);font-size:12.5px;}
+  .ts-toggle.field .ts-t{font-size:15px;}
+  .ts-toggle.active .ts-t{color:#c98a2b;}
+  .ts-slot:not(:empty){margin-top:8px;}
+  .ts-panel{background:#1c1c1e;border-radius:10px;padding:16px 16px 15px;margin-top:8px;}
+  .ts-panel label{display:block;font-size:11px;color:#9a9488;margin:0 0 5px;font-weight:400;}
+  .ts-panel input[type=number],.ts-panel input[type=text],.ts-panel select{width:100%;padding:8px 9px;border:1px solid #3a3a3d;border-radius:5px;background:#2b2b2e;color:#efe9dc;font-family:'Lato',sans-serif;font-size:13px;outline:none;}
+  .ts-panel input[type=number]:focus,.ts-panel input[type=text]:focus,.ts-panel select:focus{border-color:#E9A93A;}
+  .ts-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;}
+  .ts-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+  .ts-color-row{display:flex;gap:6px;align-items:center;}
+  .ts-color-row input[type=color]{width:36px;height:36px;flex:0 0 36px;padding:2px;border-radius:5px;border:1px solid #3a3a3d;background:#2b2b2e;cursor:pointer;}
+  .ts-color-row input[type=text]{flex:1;min-width:0;}
+  .ts-btns{display:flex;gap:6px;}
+  .ts-tog{flex:1;min-width:32px;height:36px;border:1px solid #3a3a3d;border-radius:5px;background:#2b2b2e;color:#cfc7b6;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;padding:0;transition:all .12s;}
+  .ts-tog:hover{border-color:#5a5a5d;}
+  .ts-tog.on{background:#E9A93A;border-color:#E9A93A;color:#1a1a1a;}
+  .ts-reset{margin-top:2px;font-size:12px;color:#8f8676;cursor:pointer;}
+  .ts-reset:hover{color:#E9A93A;}
+
+  /* ----- Sections visibles ----- */
+  .secvis-row{display:flex;align-items:center;gap:11px;padding:12px 14px;border-radius:6px;background:#fff;border:1px solid var(--stone);margin-bottom:8px;transition:opacity .15s;}
+  .secvis-row .ic{color:var(--olive);font-size:15px;width:20px;text-align:center;flex:0 0 20px;}
+  .secvis-row .nm{flex:1;font-size:13.5px;color:var(--navy);}
+  .secvis-row .eye{background:none;border:none;cursor:pointer;font-size:16px;line-height:1;color:var(--gold);padding:2px 4px;}
+  .secvis-row.off{opacity:.5;background:#f4f0e6;}
+  .secvis-row.off .eye{color:#a3564a;}
+  .pdf-page{width:var(--page-w);height:var(--page-h);background:var(--navy);position:relative;font-family:'Lato',sans-serif;color:var(--sand);overflow:hidden;display:flex;flex-direction:column;}
+  #page1{background:#000;}
+  #page1 .p-body{background:#000;}
+  .hero{position:relative;width:100%;flex:1 1 auto;min-height:300px;background:#241A12;overflow:hidden;}
+  .hero img{width:100%;height:100%;object-fit:cover;display:block;}
+  .hero-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#5c6b7d;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.1em;}
+  .hero-fade{position:absolute;left:0;right:0;bottom:0;height:75%;background:linear-gradient(to top, rgba(0,0,0,.82) 0%, rgba(0,0,0,.42) 44%, transparent 100%);}
+  .hero-logo{position:absolute;top:26px;left:50%;transform:translateX(-50%);max-width:110px;max-height:70px;object-fit:contain;opacity:.95;}
+  .hero-info{position:absolute;left:0;right:0;bottom:0;padding-bottom:4px;}
+  .hero-text{text-align:center;padding:0 40px;margin-bottom:14px;}
+  .hero-text h2{font-family:var(--serif-font);font-weight:500;letter-spacing:.16em;font-size:44px;margin:0 0 10px;text-transform:uppercase;color:#fff;}
+  .hero-text .loc{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--stone);display:flex;align-items:center;justify-content:center;gap:6px;}
+  .hero-text .tagline{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-light);margin-bottom:8px;}
+  .stats-band{display:flex;}
+  .stat{flex:1;padding:8px 0 4px;text-align:center;}
+  .stat .num{font-family:var(--serif-font);font-size:27px;font-weight:500;letter-spacing:.01em;color:var(--gold-light);}
+  .stat .lbl{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--stone);margin-top:2px;}
+  .p-body{padding:34px 56px;}
+  .p-desc{font-family:var(--serif-font);font-weight:400;font-size:10.5px;line-height:1.85;color:#D8D2C2;text-align:center;white-space:pre-line;}
+  .p-desc.placeholder{color:#6d7a8c;font-style:italic;text-align:center;}
+  .p-footer{position:absolute;bottom:0;left:0;right:0;padding:18px 56px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(201,183,138,.25);}
+  .footer-brand{font-family:'Space Mono',monospace;font-size:9.5px;letter-spacing:.14em;color:var(--stone);text-transform:uppercase;}
+  .p2-header{padding:34px 56px 22px;border-bottom:1px solid rgba(201,183,138,.25);display:flex;align-items:center;justify-content:space-between;}
+  .p2-header h2{font-family:var(--serif-font);font-weight:600;font-size:24px;text-transform:uppercase;letter-spacing:.02em;color:#fff;margin:0;}
+  .p2-header img{max-height:44px;max-width:100px;object-fit:contain;}
+  .gallery-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;}
+  .gallery-grid .g-img{width:100%;height:150px;object-fit:cover;border-radius:2px;background:#241A12;}
+  .gallery-empty{height:150px;border-radius:2px;background:rgba(255,255,255,.04);border:1px dashed rgba(201,183,138,.25);display:flex;align-items:center;justify-content:center;color:#5c6b7d;font-family:'Space Mono',monospace;font-size:10px;}
+  .amenity-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-top:14px;}
+  .amenity-item{display:flex;align-items:center;gap:8px;font-size:12px;color:#D8D2C2;}
+  .amenity-item .dot{width:5px;height:5px;border-radius:50%;background:var(--gold-light);flex:0 0 5px;}
+  .price-plaque{margin-top:26px;background:rgba(201,183,138,.08);border:1px solid rgba(201,183,138,.3);border-radius:2px;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;}
+  .price-plaque .pp-label{font-family:'Space Mono',monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--stone);}
+  .price-plaque .pp-val{font-family:var(--serif-font);font-size:25px;font-weight:500;letter-spacing:.01em;color:var(--gold-light);}
+  .seal{width:60px;height:60px;border-radius:50%;border:1.5px solid var(--gold-light);display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;}
+  .seal .init{font-family:var(--serif-font);font-weight:700;font-size:18px;letter-spacing:.02em;}
+  .seal .st{font-family:'Space Mono',monospace;font-size:6px;letter-spacing:.1em;text-transform:uppercase;color:var(--stone);margin-top:1px;}
+  .contact-block{font-size:11px;line-height:1.7;color:#D8D2C2;text-align:right;}
+  .contact-block .cname{font-family:var(--serif-font);font-weight:600;font-style:italic;font-size:14px;color:#fff;}
+
+  /* ---------- CATALOG ---------- */
+  .catalog-view{display:none;padding:44px;min-height:calc(100vh - 53px);}
+  .catalog-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:30px;}
+  .catalog-header h2{font-family:var(--serif-font);color:#fff;font-size:28px;font-weight:600;margin:0;}
+  .catalog-header .count{font-family:'Space Mono',monospace;font-size:11px;color:var(--stone);margin-top:4px;display:block;}
+  .newvilla-btn{font-family:'Space Mono',monospace;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;background:var(--gold);color:var(--navy-deep);border:none;padding:12px 20px;border-radius:20px;cursor:pointer;}
+  .newvilla-btn:hover{background:var(--gold-light);}
+  .villa-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:22px;}
+  .villa-card{background:var(--sand);border-radius:4px;overflow:hidden;display:flex;flex-direction:column;}
+  .vc-cover{height:200px;background:#c9c1ac;position:relative;overflow:hidden;}
+  .vc-cover img{width:100%;height:100%;object-fit:cover;}
+  .vc-cover .vc-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#8a8272;font-family:'Space Mono',monospace;font-size:10px;}
+  .vc-body{padding:14px 18px 16px;}
+  .vc-name{font-family:var(--serif-font);font-weight:600;font-size:19px;color:var(--navy);margin:0 0 3px;}
+  .vc-loc{font-size:11.5px;color:#8a8272;margin-bottom:10px;display:flex;align-items:center;gap:4px;}
+  .vc-stats{display:flex;align-items:center;justify-content:space-between;font-family:'Space Mono',monospace;font-size:10.5px;color:#7a7264;margin-bottom:14px;}
+  .vc-stats .vc-stat-group{display:flex;gap:12px;}
+  .vc-stats .vc-stat-group span{display:flex;align-items:center;gap:3px;}
+  .vc-stats .vc-date{color:#a39c8c;}
+  .vc-actions{display:flex;gap:8px;}
+  .vc-btn{flex:1;font-size:10.5px;font-family:'Space Mono',monospace;letter-spacing:.04em;text-transform:uppercase;padding:8px 6px;border-radius:2px;border:1px solid var(--navy);background:transparent;color:var(--navy);cursor:pointer;text-align:center;}
+  .vc-btn:hover{background:var(--navy);color:#fff;}
+  .vc-btn.danger{border-color:#8a3a2f;color:#8a3a2f;}
+  .vc-btn.danger:hover{background:#8a3a2f;color:#fff;}
+  .media-head{display:flex;align-items:center;justify-content:space-between;margin-top:26px;margin-bottom:4px;}
+  .media-head .media-title{font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);}
+  .media-actions{display:flex;gap:8px;}
+  .media-actions button{font-family:'Lato',sans-serif;font-size:11.5px;padding:7px 12px;border-radius:20px;border:1px solid var(--stone);background:#fff;color:var(--navy);cursor:pointer;display:flex;align-items:center;gap:5px;}
+  .media-actions button:hover{border-color:var(--gold);}
+  .media-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
+  .media-item{position:relative;aspect-ratio:1/1;border-radius:4px;overflow:hidden;border:1px solid var(--stone);cursor:pointer;}
+  .media-item img{width:100%;height:100%;object-fit:cover;display:block;}
+  .media-num{position:absolute;bottom:5px;left:5px;background:rgba(26,20,15,.8);color:#fff;font-family:'Space Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;}
+  .media-cover-badge{position:absolute;top:5px;left:5px;background:var(--gold);color:var(--navy-deep);font-family:'Space Mono',monospace;font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;padding:3px 7px;border-radius:3px;font-weight:600;}
+  .media-rm{position:absolute;top:5px;right:5px;background:rgba(26,20,15,.85);color:#fff;width:18px;height:18px;font-size:11px;border-radius:2px;display:flex;align-items:center;justify-content:center;}
+  .media-empty{grid-column:1/-1;text-align:center;padding:24px 0;color:#a39c8c;font-size:11.5px;font-style:italic;}
+  .vc-badge{position:absolute;top:10px;right:10px;background:rgba(26,20,15,.85);color:var(--gold-light);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:3px;z-index:2;}
+
+  /* ---------- MODAL ---------- */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(14,28,44,.55);z-index:50;align-items:center;justify-content:center;}
+  .modal-overlay.show{display:flex;}
+  .modal-box{background:#fff;border-radius:6px;width:400px;max-width:90vw;padding:30px 30px 24px;box-shadow:0 30px 70px -20px rgba(0,0,0,.5);}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .modal-head h3{font-family:var(--serif-font);font-size:22px;font-weight:600;color:var(--navy);margin:0;}
+  .modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:#8a8272;}
+  .modal-box label{display:block;font-size:12px;color:var(--navy);margin:14px 0 5px;font-weight:500;}
+  .modal-box label .req{color:#a35a4a;}
+  .modal-box input{width:100%;padding:10px 12px;border:1px solid var(--stone);border-radius:2px;font-family:'Lato',sans-serif;font-size:14px;outline:none;}
+  .modal-box input:focus{border-color:var(--gold);}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:26px;}
+  .modal-actions button{font-family:'Lato',sans-serif;font-size:13px;padding:10px 18px;border-radius:4px;cursor:pointer;}
+  .modal-cancel{background:#fff;border:1px solid var(--stone);color:var(--navy);}
+  .modal-cancel:hover{background:#f4f0e6;}
+  .modal-create{background:var(--navy);border:none;color:#fff;}
+  .modal-create:hover{background:var(--navy-deep);}
+
+  .subtabs{display:flex;flex-wrap:wrap;gap:4px;margin:18px 0 22px;border-bottom:1px solid var(--stone);}
+  .subtab-btn{font-family:'Lato',sans-serif;font-size:12px;color:#8a8272;background:none;border:none;padding:8px 10px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}
+  .subtab-btn.on{color:var(--navy);font-weight:600;border-bottom-color:var(--gold);}
+  .subtab-btn:hover:not(.on){color:var(--navy);}
+  .tabpanel{display:none;}
+  .tabpanel.active{display:block;}
+  .list-card{border:1px solid var(--stone);border-radius:3px;padding:14px;margin-bottom:12px;background:#fff;}
+  .list-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .list-card-head span{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--olive);}
+  .list-card-head .rm-list{background:none;border:none;color:#a35a4a;cursor:pointer;font-size:12px;}
+  .add-item-btn{width:100%;padding:10px;border:1.5px dashed var(--stone);border-radius:3px;background:#fff;color:var(--olive);font-size:12.5px;cursor:pointer;margin-top:4px;}
+  .add-item-btn:hover{border-color:var(--gold);color:var(--gold);}
+  select#f-status{width:100%;padding:10px 12px;border:1px solid var(--stone);border-radius:2px;background:#fff;font-family:'Lato',sans-serif;font-size:14px;color:var(--ink);}
+
+  .rooms-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:18px 0 14px;}
+  .rooms-header .rh-left{display:flex;flex-direction:column;gap:2px;}
+  .rh-title{font-family:var(--serif-font);font-weight:600;font-size:16px;color:var(--navy);}
+  .rh-drag-hint{font-family:'Space Mono',monospace;font-size:9.5px;letter-spacing:.06em;color:#9c9280;}
+  .rh-add-btn{font-family:'Lato',sans-serif;font-size:12px;background:var(--navy);border:1px solid var(--navy);color:var(--gold-light);padding:8px 14px;border-radius:20px;cursor:pointer;}
+  .rh-add-btn:hover{background:var(--gold);color:#1a1a1a;}
+
+  .room-card{display:flex;gap:12px;padding:14px;border:1px solid var(--stone);border-radius:8px;background:#FBF6E4;margin-bottom:14px;cursor:grab;}
+  .room-card.dragging{opacity:.4;}
+  .room-drag{color:#c9b370;font-size:14px;padding-top:32px;user-select:none;}
+  .room-photo{width:86px;height:86px;border-radius:6px;overflow:hidden;background:#E4DCC8;flex-shrink:0;cursor:pointer;position:relative;}
+  .room-photo img{width:100%;height:100%;object-fit:cover;display:block;}
+  .room-photo .rp-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px;color:#9AAAB8;}
+  .room-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;}
+  .room-top-row{display:flex;gap:8px;align-items:flex-start;}
+  .room-top-row .room-fields{flex:1;display:flex;flex-direction:column;gap:8px;}
+  .room-top-row input{width:100%;padding:8px 10px;border:1px solid #E3C87A;border-radius:3px;background:#fff;font-family:'Lato',sans-serif;font-size:13px;}
+  .room-icons{display:flex;gap:8px;padding-top:2px;}
+  .room-icon-btn{background:none;border:none;cursor:pointer;font-size:15px;color:#c9a33e;}
+  .room-icon-btn.dim{opacity:.4;}
+  .room-icon-btn.trash{color:#a3564a;}
+  .room-desc-wrap{position:relative;}
+  .room-desc-wrap textarea{width:100%;min-height:64px;padding:8px 34px 8px 10px;border:1px solid #E3C87A;border-radius:3px;background:#fff;font-family:'Lato',sans-serif;font-size:12.5px;line-height:1.5;resize:vertical;}
+  .room-ai-btn{position:absolute;bottom:8px;right:6px;background:none;border:none;cursor:pointer;font-size:16px;line-height:1;}
+  .room-ai-btn:disabled{opacity:.4;cursor:wait;}
+
+  .picker-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-height:320px;overflow-y:auto;margin-top:4px;}
+  .picker-thumb{aspect-ratio:1/1;border-radius:4px;overflow:hidden;cursor:pointer;border:1px solid var(--stone);}
+  .picker-thumb img{width:100%;height:100%;object-fit:cover;}
+  .picker-thumb:hover{border-color:var(--gold);}
+
+  hr.divider{border:none;border-top:1px solid var(--stone);margin:24px 0;}
+  .form-panel hr.divider{border-top-color:var(--stone);}
+  .logo-gallery-head{font-size:13px;font-weight:600;color:var(--navy);margin-top:8px;display:flex;align-items:center;gap:6px;}
+  .logo-gallery-sub{font-size:11px;color:#8a7f68;margin:4px 0 10px;line-height:1.5;}
+  .logo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
+  .logo-card{position:relative;border:1.5px solid var(--stone);border-radius:4px;background:#fff;height:70px;display:flex;align-items:center;justify-content:center;padding:6px;cursor:default;}
+  .logo-card img{max-width:100%;max-height:100%;object-fit:contain;}
+  .logo-card .logo-rm{position:absolute;top:2px;right:2px;background:rgba(26,20,15,.85);color:#fff;width:16px;height:16px;font-size:10px;border-radius:2px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  input[type=range]{width:100%;accent-color:var(--gold);margin-top:6px;}
+</style>
+</head>
+<body>
+
+<div id="loginGate" style="position:fixed;inset:0;background:var(--navy-deep);display:flex;align-items:center;justify-content:center;z-index:999;">
+  <div style="width:340px;max-width:88vw;background:var(--sand);padding:36px 32px;border-radius:6px;box-shadow:0 30px 70px -20px rgba(0,0,0,.6);">
+    <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--olive);margin-bottom:6px;">Atelier Villa <span style="color:var(--gold);font-weight:700;">· v2026-07-16-AJ</span></div>
+    <h1 style="font-family:var(--serif-font);font-weight:500;font-size:26px;color:var(--navy);margin:0 0 22px;">Connexion</h1>
+    <label style="display:block;font-size:12px;color:var(--navy);margin:0 0 5px;font-weight:500;">Nom d'utilisateur</label>
+    <input type="text" id="login-user" style="width:100%;padding:10px 12px;border:1px solid var(--stone);border-radius:2px;font-family:'Lato',sans-serif;font-size:14px;margin-bottom:14px;" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    <label style="display:block;font-size:12px;color:var(--navy);margin:0 0 5px;font-weight:500;">Mot de passe</label>
+    <input type="password" id="login-pass" style="width:100%;padding:10px 12px;border:1px solid var(--stone);border-radius:2px;font-family:'Lato',sans-serif;font-size:14px;margin-bottom:8px;" onkeydown="if(event.key==='Enter')attemptLogin()">
+    <div id="login-error" style="display:none;color:#a3564a;font-size:12px;margin-bottom:10px;">Identifiants incorrects.</div>
+    <button onclick="attemptLogin()" style="width:100%;margin-top:10px;padding:14px;border:none;border-radius:2px;background:var(--navy);color:var(--gold-light);font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;">Se connecter</button>
+  </div>
+</div>
+
+<div class="topnav">
+  <div class="brand">Atelier Villa <span style="color:var(--gold-light);font-weight:700;">· v2026-07-16-AJ</span></div>
+  <button class="navbtn on" id="tab-editor" onclick="switchTab('editor')">Fiche villa</button>
+  <button class="navbtn" id="tab-new" onclick="openNewModal()">+ Nouvelle villa</button>
+  <button class="navbtn" id="tab-catalog" onclick="switchTab('catalog')">Toutes mes villas</button>
+</div>
+
+<div class="app" id="editorView">
+
+  <div class="form-panel">
+    <h1 class="title">Fiche de<br>présentation</h1>
+    <div class="status-line" id="statusLine">Nouvelle villa (non enregistrée)</div>
+
+    <div class="subtabs" id="subtabs">
+      <button class="subtab-btn on" data-panel="info" onclick="switchSubtab('info')">Info</button>
+      <button class="subtab-btn" data-panel="medias" onclick="switchSubtab('medias')">Médias</button>
+      <button class="subtab-btn" data-panel="pieces" onclick="switchSubtab('pieces')">Pièces</button>
+      <button class="subtab-btn" data-panel="equipements" onclick="switchSubtab('equipements')">Équipements</button>
+      <button class="subtab-btn" data-panel="sections" onclick="switchSubtab('sections')">Sections</button>
+      <button class="subtab-btn" data-panel="dispo" onclick="switchSubtab('dispo')">Disponibilités</button>
+    </div>
+
+    <!-- ===== INFO ===== -->
+    <div class="tabpanel active" id="panel-info">
+      <label>Nom de la villa</label>
+      <input type="text" id="f-name" placeholder="Villa Belle Rive" oninput="render()">
+      <div class="ts-toggle field" onclick="openFieldStyle('name', this)"><span class="ts-t">T</span> Style du texte <span class="ts-caret">⌄</span></div>
+      <div class="ts-slot" id="tsslot-name"></div>
+
+      <label>Tagline</label>
+      <input type="text" id="f-tagline" placeholder="A sanctuary of elegance…" oninput="render()">
+      <div class="ts-toggle field" onclick="openFieldStyle('tagline', this)"><span class="ts-t">T</span> Style du texte <span class="ts-caret">⌄</span></div>
+      <div class="ts-slot" id="tsslot-tagline"></div>
+
+      <div class="row2">
+        <div><label>Localisation</label><input type="text" id="f-loc" placeholder="Saint-Tropez" oninput="render()"></div>
+        <div><label>Région</label><input type="text" id="f-region" placeholder="Côte d'Azur" oninput="render()"></div>
+      </div>
+
+      <label>Description courte</label>
+      <textarea id="f-desc-short" placeholder="Une phrase d'accroche…" oninput="render()" style="min-height:56px;"></textarea>
+      <div class="ts-toggle field" onclick="openFieldStyle('descShort', this)"><span class="ts-t">T</span> Style du texte <span class="ts-caret">⌄</span></div>
+      <div class="ts-slot" id="tsslot-descShort"></div>
+
+      <label>Description complète</label>
+      <textarea id="f-desc" placeholder="Description détaillée de la propriété…" oninput="render()"></textarea>
+      <div class="ts-toggle field" onclick="openFieldStyle('desc', this)"><span class="ts-t">T</span> Style du texte <span class="ts-caret">⌄</span></div>
+      <div class="ts-slot" id="tsslot-desc"></div>
+
+      <div class="row2">
+        <div><label>Capacité (guests)</label><input type="number" id="f-guests" min="0" oninput="render()"></div>
+        <div><label>Chambres</label><input type="number" id="f-bed" min="0" oninput="render()"></div>
+      </div>
+      <div class="row2">
+        <div><label>Salles de bain</label><input type="number" id="f-bath" min="0" oninput="render()"></div>
+        <div><label>Surface (m²)</label><input type="number" id="f-surface" min="0" oninput="render()"></div>
+      </div>
+      <div class="row2">
+        <div><label>Prix depuis (€)</label><input type="text" id="f-pricenight" placeholder="1 800" oninput="render()"></div>
+        <div><label>Prix jusqu'à (€)</label><input type="text" id="f-priceweek" placeholder="3 200" oninput="render()"></div>
+      </div>
+
+      <label>Disponibilité</label>
+      <input type="text" id="f-availability" placeholder="Disponible toute l'année" oninput="render()">
+
+      <hr class="divider">
+
+      <div class="section-label">Conciergerie</div>
+      <label>Nom / société</label>
+      <input type="text" id="f-cname" placeholder="Nom de votre conciergerie" oninput="render()">
+      <div class="row2">
+        <div><label>Téléphone</label><input type="tel" id="f-cphone" placeholder="+33 6 00 00 00 00" oninput="render()"></div>
+        <div><label>Email</label><input type="email" id="f-cemail" placeholder="contact@conciergerie.fr" oninput="render()"></div>
+      </div>
+
+      <hr class="divider">
+
+      <label>Statut</label>
+      <select id="f-status" onchange="render()">
+        <option value="brouillon">Brouillon</option>
+        <option value="publie">Publié</option>
+      </select>
+
+      <hr class="divider">
+
+      <div class="section-label">Marque</div>
+      <div class="toggle-row" id="brandToggle">
+        <div class="toggle-opt" data-mode="whitelabel">Marque blanche</div>
+        <div class="toggle-opt on" data-mode="logo">Avec mon logo</div>
+      </div>
+
+      <div id="logoField" style="margin-top:18px;">
+        <div class="logo-gallery-head">☆ Galerie de Logos</div>
+        <div class="logo-gallery-sub">Uploadez plusieurs logos et choisissez celui à utiliser pour la couverture et/ou les watermarks.</div>
+        <div class="dropzone" id="logoDrop" onclick="document.getElementById('f-logo').click()">⬆ Ajouter un logo à la galerie</div>
+        <input type="file" id="f-logo" accept="image/*" multiple style="display:none" onchange="handleLogoFiles(event)">
+        <div class="logo-grid" id="logoGrid"></div>
+
+        <label style="margin-top:18px;">Logo couverture</label>
+        <select id="f-cover-logo" onchange="updateCoverLogo(this.value)"></select>
+        <label>Logo watermarks (pièces &amp; galerie)</label>
+        <select id="f-watermark-logo" onchange="updateWatermarkLogo(this.value)"></select>
+
+        <label>Taille du logo (couverture) <span id="logoSizeLabel" style="float:right;color:#8a8272;">90px</span></label>
+        <input type="range" id="f-logo-size" min="50" max="400" value="90" oninput="updateLogoSize(this.value)">
+        <div class="hint" style="display:flex;justify-content:space-between;margin-top:-6px;"><span>Petit (50px)</span><span>Grand (400px)</span></div>
+      </div>
+
+      <label style="margin-top:20px;">Photos dans la galerie PDF</label>
+      <select id="f-gallery-count" onchange="updateGalleryCount(this.value)">
+        <option value="6" selected>6 photos</option>
+        <option value="9">9 photos</option>
+      </select>
+
+      <label>Pièces par page (PDF)</label>
+      <select id="f-pieces-per-page" onchange="updatePiecesPerPage(this.value)">
+        <option value="1">1 pièce par page</option>
+        <option value="2" selected>2 pièces par page</option>
+      </select>
+
+      <div class="ts-toggle" id="tsToggle" onclick="openFieldStyle('rooms', this)"><span class="ts-t">T</span> Style du texte — texte des pièces <span class="ts-caret">⌄</span></div>
+      <div class="ts-slot" id="tsslot-rooms"></div>
+      <div class="ts-panel" id="tsPanel" style="display:none;">
+        <div class="ts-target-name" id="ts-target-name" style="font-size:11px;color:#E9A93A;letter-spacing:.04em;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #33333a;">✎ Style en cours d'édition</div>
+        <div class="ts-grid3">
+          <div><label>Taille</label><input type="number" id="ts-size" step="0.5" min="4" value="13" oninput="updateTS('size', parseFloat(this.value))"></div>
+          <div><label>Couleur</label><div class="ts-color-row"><input type="color" id="ts-color" value="#ffffff" oninput="setTSColor(this.value)"><input type="text" id="ts-color-hex" value="#ffffff" oninput="setTSColor(this.value)"></div></div>
+          <div><label>Opacité</label><input type="number" id="ts-opacity" min="0" max="1" step="0.05" value="1" oninput="updateTS('opacity', parseFloat(this.value))"></div>
+        </div>
+        <div class="ts-grid3">
+          <div><label>Police</label><select id="ts-font" onchange="updateTS('font', this.value)">
+            <option value="Times Roman">Times Roman</option>
+            <option value="Helvetica">Helvetica</option>
+            <option value="Fraunces" selected>Fraunces</option>
+            <option value="Cormorant Garamond">Cormorant Garamond</option>
+            <option value="Playfair Display">Playfair Display</option>
+            <option value="EB Garamond">EB Garamond</option>
+            <option value="Marcellus">Marcellus</option>
+          </select></div>
+          <div><label>Style</label><div class="ts-btns"><button type="button" id="ts-bold" class="ts-tog" onclick="toggleTS('bold', this)" style="font-family:serif;font-weight:700;">B</button><button type="button" id="ts-italic" class="ts-tog on" onclick="toggleTS('italic', this)" style="font-family:serif;font-style:italic;">I</button></div></div>
+          <div><label>Espacement</label><input type="number" id="ts-spacing" step="0.5" value="0" oninput="updateTS('spacing', parseFloat(this.value))"></div>
+        </div>
+        <label>Alignement texte</label>
+        <div class="ts-btns" id="ts-align" style="margin-bottom:12px;">
+          <button type="button" data-v="left" class="ts-tog on" onclick="setTSAlign('left')" title="Gauche"><svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor"><rect width="15" height="1.6"/><rect y="4.7" width="9" height="1.6"/><rect y="9.4" width="13" height="1.6"/></svg></button>
+          <button type="button" data-v="center" class="ts-tog" onclick="setTSAlign('center')" title="Centré"><svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor"><rect width="15" height="1.6"/><rect x="3" y="4.7" width="9" height="1.6"/><rect x="1" y="9.4" width="13" height="1.6"/></svg></button>
+          <button type="button" data-v="right" class="ts-tog" onclick="setTSAlign('right')" title="Droite"><svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor"><rect width="15" height="1.6"/><rect x="6" y="4.7" width="9" height="1.6"/><rect x="2" y="9.4" width="13" height="1.6"/></svg></button>
+          <button type="button" data-v="justify" class="ts-tog" onclick="setTSAlign('justify')" title="Justifié"><svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor"><rect width="15" height="1.6"/><rect y="4.7" width="15" height="1.6"/><rect y="9.4" width="15" height="1.6"/></svg></button>
+        </div>
+        <div class="ts-grid2">
+          <div><label>Position bloc (H)</label><div class="ts-btns" id="ts-blockpos">
+            <button type="button" data-v="alt" class="ts-tog on" onclick="setTSBlock('alt')" title="Alterné : droite, gauche, droite…">⇄</button>
+            <button type="button" data-v="left" class="ts-tog" onclick="setTSBlock('left')" title="Gauche">G</button>
+            <button type="button" data-v="center" class="ts-tog" onclick="setTSBlock('center')" title="Centré">C</button>
+            <button type="button" data-v="right" class="ts-tog" onclick="setTSBlock('right')" title="Droite">D</button>
+          </div></div>
+          <div><label>Interligne</label><input type="number" id="ts-lh" step="0.1" min="0.8" value="1.7" oninput="updateTS('lineHeight', parseFloat(this.value))"></div>
+        </div>
+        <div class="ts-grid2">
+          <div><label>Largeur max (pt)</label><input type="number" id="ts-maxw" step="10" min="80" value="520" oninput="updateTS('maxWidth', parseFloat(this.value))"></div>
+          <div><label>Décalage vertical (pt)</label><input type="number" id="ts-offsety" step="5" value="0" oninput="updateTS('offsetY', parseFloat(this.value))"></div>
+        </div>
+        <div class="ts-grid2">
+          <div><label>Marge haute (pt)</label><input type="number" id="ts-mtop" step="5" value="0" oninput="updateTS('marginTop', parseFloat(this.value))"></div>
+          <div><label>Marge basse (pt)</label><input type="number" id="ts-mbot" step="5" value="0" oninput="updateTS('marginBottom', parseFloat(this.value))"></div>
+        </div>
+        <div class="ts-reset" onclick="resetTextStyle()">Réinitialiser les styles</div>
+      </div>
+    </div>
+
+    <!-- ===== MÉDIAS ===== -->
+    <div class="tabpanel" id="panel-medias">
+      <div class="media-head">
+        <span class="media-title">Galerie d'images (<span id="mediaCount">0</span>)</span>
+        <div class="media-actions">
+          <button onclick="addPhotoByUrl()">🔗 URL</button>
+          <button onclick="document.getElementById('f-photos').click()">⬆ Upload</button>
+          <button id="dlPhotosBtn" onclick="downloadAllPhotos()">⬇ Télécharger</button>
+        </div>
+      </div>
+      <input type="file" id="f-photos" accept="image/*" multiple style="display:none" onchange="handlePhotos(event)">
+      <div class="media-grid" id="thumbs"></div>
+      <div class="hint">Cliquez sur une photo pour la définir comme couverture. « ⬇ Télécharger » enregistre toutes les photos (en .zip) sur votre ordinateur.</div>
+    </div>
+
+    <!-- ===== PIÈCES ===== -->
+    <div class="tabpanel" id="panel-pieces">
+      <div class="rooms-header">
+        <div class="rh-left">
+          <span class="rh-title">🛏 Pièces &amp; Espaces (<span id="roomsCount">0/0</span>)</span>
+          <span class="rh-drag-hint">⠿⠿ Glisser pour réordonner</span>
+        </div>
+        <button class="rh-add-btn" onclick="addRoom()">+ Ajouter</button>
+      </div>
+      <div id="roomsList"></div>
+      <div class="hint">Assignez une photo à chaque pièce puis cliquez sur ✨ pour générer une description automatiquement à partir de l'image.</div>
+    </div>
+
+    <!-- ===== ÉQUIPEMENTS ===== -->
+    <div class="tabpanel" id="panel-equipements">
+      <div class="section-label">Équipements</div>
+      <div class="chips" id="amenities"></div>
+    </div>
+
+    <!-- ===== SECTIONS ===== -->
+    <div class="tabpanel" id="panel-sections">
+      <div class="section-label">Sections visibles</div>
+      <div id="sectionVisList"></div>
+      <div class="hint">Cliquez sur l'œil pour afficher ou masquer une partie sur le PDF.</div>
+
+      <hr class="divider">
+      <div class="section-label">Contact</div>
+      <div class="hint" style="margin-top:0;">Ces informations s'affichent sous les photos de la galerie (si la section « Contact » est visible).</div>
+      <label>Email</label>
+      <input type="email" id="f-contact-email" placeholder="contact@conciergerie.fr" oninput="render()">
+      <label>Téléphone</label>
+      <input type="tel" id="f-contact-phone" placeholder="+33 6 00 00 00 00" oninput="render()">
+      <label>Site web</label>
+      <input type="text" id="f-contact-web" placeholder="www.villa-belle-rive.com" oninput="render()">
+
+      <hr class="divider">
+      <div class="section-label">Sections personnalisées</div>
+      <div id="sectionsList"></div>
+      <button class="add-item-btn" onclick="addSection()">+ Ajouter une section</button>
+      <div class="hint">Ajoutez des blocs libres (ex. "Accès & transferts", "Règles de la maison"...).</div>
+    </div>
+
+    <!-- ===== DISPONIBILITÉS ===== -->
+    <div class="tabpanel" id="panel-dispo">
+      <div class="section-label">Disponibilité</div>
+      <div class="hint" style="margin-top:0;">Le texte de disponibilité se règle depuis l'onglet <strong>Info</strong>. Un calendrier de réservation détaillé (dates bloquées, saisons) pourra être ajouté ici ultérieurement si besoin.</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="generate-btn secondary" id="saveBtn" onclick="saveVilla()">Enregistrer</button>
+      <button class="generate-btn secondary" onclick="duplicateVilla()">Dupliquer</button>
+      <button class="generate-btn" id="genBtn" onclick="generatePDF()">Export PDF</button>
+    </div>
+    <div class="hint">« Enregistrer » ajoute cette villa à la page « Toutes mes villas », pour la retrouver et régénérer son PDF plus tard. Les données sont stockées dans votre navigateur, propres à cet outil.</div>
+
+    <button type="button" onclick="logout()" style="width:100%;margin-top:26px;padding:13px;border:1px solid #a3564a;border-radius:2px;background:#fff;color:#a3564a;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;">⎋ Se déconnecter</button>
+  </div>
+
+  <div class="preview-panel">
+    <div>
+      <div class="preview-label">Aperçu — Page 1</div>
+      <div class="page-scale-wrap"><div class="page-scale-inner">
+        <div class="pdf-page" id="page1">
+          <div class="hero" id="hero">
+            <div class="hero-empty" id="hero-empty">PHOTO DE COUVERTURE</div>
+            <div class="hero-fade"></div>
+            <div class="hero-info">
+              <div class="hero-text" id="p1-hero-text"></div>
+              <div class="stats-band" id="p1-stats-band"></div>
+            </div>
+          </div>
+          <div class="p-body" id="p1-body"></div>
+          <div class="p-footer" style="display:none;">
+            <div class="footer-brand" id="p1-brand"></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+
+    <div id="roomPagesContainer"></div>
+    <div id="galleryPageContainer"></div>
+  </div>
+
+</div>
+
+<div class="catalog-view" id="catalogView">
+  <div class="catalog-header">
+    <div>
+      <h2>Mes Présentations</h2>
+      <span class="count" id="catalogCount">0 villa</span>
+    </div>
+    <button class="newvilla-btn" onclick="newVilla()">+ Nouvelle Villa</button>
+  </div>
+  <div id="catalogBody"></div>
+</div>
+
+<div class="modal-overlay" id="newModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>Nouvelle Villa</h3>
+      <button class="modal-close" onclick="closeNewModal()">✕</button>
+    </div>
+    <label>Nom de la villa <span class="req">*</span></label>
+    <input type="text" id="m-name" placeholder="Villa Azure">
+    <label>Localisation <span class="req">*</span></label>
+    <input type="text" id="m-loc" placeholder="Saint-Tropez">
+    <label>Région</label>
+    <input type="text" id="m-region" placeholder="Côte d'Azur">
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeNewModal()">Annuler</button>
+      <button class="modal-create" onclick="confirmCreateVilla()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="photoPickerOverlay">
+  <div class="modal-box" style="width:460px;">
+    <div class="modal-head">
+      <h3>Choisir une photo</h3>
+      <button class="modal-close" onclick="closePhotoPicker()">✕</button>
+    </div>
+    <div class="picker-grid" id="photoPickerGrid"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closePhotoPicker()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div id="zoomBar" title="Zoom des aperçus — boutons + et −">
+  <button type="button" onclick="stepPreviewZoom(-1)" title="Dézoomer">−</button>
+  <span class="zoom-val" id="zoomVal" onclick="resetPreviewZoom()" title="Cliquer pour réinitialiser">62%</span>
+  <button type="button" onclick="stepPreviewZoom(1)" title="Zoomer">+</button>
+</div>
+
+<script>
+const AMENITIES = ["Piscine privée","Vue mer","Climatisation","Wifi haut débit","Parking privé",
+  "Jardin paysager","Terrasse","Cuisine équipée","Jacuzzi / spa","Salle de sport",
+  "Accès plage","Service de ménage"];
+let amenityChipEls = {};
+let selectedAmenities = new Set();
+let photos = [];
+let brandMode = 'logo';
+let currentVillaId = null;
+let rooms = [];
+let sections = [];
+let roomIdSeq = 0;
+let sectionIdSeq = 0;
+let logos = [];
+let logoIdSeq = 0;
+let coverLogoId = null;
+let watermarkLogoId = null;
+let logoSize = 90;
+let galleryCount = 6;
+let piecesPerPage = 2;
+
+/* ---------- Style du texte (dissocié : un style indépendant par élément — nom, description, pièces) ---------- */
+const DEFAULT_TEXT_STYLES = {
+  name:      { size:40,   color:'#FFFFFF', opacity:1, font:'Times Roman', bold:false, italic:false, spacing:6,   align:'center', blockPos:'center', lineHeight:1.1,  maxWidth:700, offsetY:0, marginTop:0, marginBottom:0 },
+  tagline:   { size:10.5, color:'#D8B87E', opacity:1, font:'Helvetica',   bold:false, italic:false, spacing:1.5, align:'center', blockPos:'center', lineHeight:1.3,  maxWidth:680, offsetY:0, marginTop:0, marginBottom:0 },
+  descShort: { size:13,   color:'#D8B87E', opacity:1, font:'Fraunces',    bold:false, italic:true,  spacing:0,   align:'center', blockPos:'center', lineHeight:1.5,  maxWidth:660, offsetY:0, marginTop:0, marginBottom:0 },
+  desc:      { size:10.5, color:'#D8D2C2', opacity:1, font:'Fraunces',    bold:false, italic:false, spacing:0,   align:'center', blockPos:'center', lineHeight:1.85, maxWidth:680, offsetY:0, marginTop:0, marginBottom:0 },
+  rooms:     { size:13,   color:'#FFFFFF', opacity:1, font:'Fraunces',    bold:false, italic:true,  spacing:0,   align:'left',   blockPos:'alt',    lineHeight:1.7,  maxWidth:520, offsetY:0, marginTop:0, marginBottom:0 }
+};
+const DEFAULT_TEXT_STYLE = DEFAULT_TEXT_STYLES.rooms;   // compat
+const TS_TARGETS = ['name','tagline','descShort','desc','rooms'];
+function freshTextStyles(){ const o={}; TS_TARGETS.forEach(k=> o[k]=Object.assign({},DEFAULT_TEXT_STYLES[k])); return o; }
+let textStyles = freshTextStyles();
+let tsTarget = 'rooms';
+let textStyle = textStyles[tsTarget];   // référence vivante vers le style en cours d'édition dans le panneau
+
+// Catalogue de polices (CSS pour l'écran + fichiers TTF pour le PDF ; builtin = police native jsPDF).
+const FONT_CATALOG = {
+  'Times Roman':        {css:"'Times New Roman',Times,serif", builtin:'times'},
+  'Helvetica':          {css:"Helvetica,Arial,sans-serif", builtin:'helvetica'},
+  'Fraunces':           {css:"'Fraunces','Playfair Display',serif", dir:'ofl/fraunces',
+      ital:['static/Fraunces_9pt/Fraunces_9pt-Italic.ttf','static/Fraunces-Italic.ttf'], reg:['static/Fraunces_9pt/Fraunces_9pt-Regular.ttf','static/Fraunces-Regular.ttf']},
+  'Cormorant Garamond': {css:"'Cormorant Garamond',serif", dir:'ofl/cormorantgaramond',
+      ital:['CormorantGaramond-Italic.ttf'], reg:['CormorantGaramond-Regular.ttf']},
+  'Playfair Display':   {css:"'Playfair Display',serif", dir:'ofl/playfairdisplay',
+      ital:['static/PlayfairDisplay-Italic.ttf'], reg:['static/PlayfairDisplay-Regular.ttf']},
+  'EB Garamond':        {css:"'EB Garamond',serif", dir:'ofl/ebgaramond',
+      ital:['static/EBGaramond-Italic.ttf'], reg:['static/EBGaramond-Regular.ttf']},
+  'Marcellus':          {css:"'Marcellus',serif", dir:'ofl/marcellus',
+      ital:['Marcellus-Regular.ttf'], reg:['Marcellus-Regular.ttf']}
+};
+
+function hexToRgb(hex){
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex||'');
+  return m ? [parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)] : [255,255,255];
+}
+function hexWithOpacity(hex, op){ const c = hexToRgb(hex); const a = (op===undefined||op===null||isNaN(op)) ? 1 : op; return `rgba(${c[0]},${c[1]},${c[2]},${a})`; }
+function tsFontCss(s){ s = s || textStyle; return (FONT_CATALOG[s.font]||FONT_CATALOG['Fraunces']).css; }
+function tsRefresh(){ render(); renderRoomPages(); }
+
+let tsOpenTarget = null;
+// Ouvre (ou referme) le panneau « Style du texte » directement sous le champ concerné.
+function openFieldStyle(target, toggleEl){
+  const panel = document.getElementById('tsPanel');
+  const slot = document.getElementById('tsslot-'+target);
+  if(!panel || !slot) return;
+  const isOpenHere = (tsOpenTarget === target && panel.style.display !== 'none');
+  document.querySelectorAll('.ts-toggle .ts-caret').forEach(c=>c.textContent='⌄');
+  document.querySelectorAll('.ts-toggle').forEach(t=>t.classList.remove('active'));
+  if(isOpenHere){ panel.style.display='none'; tsOpenTarget=null; return; }
+  tsTarget = target; textStyle = textStyles[target];
+  slot.appendChild(panel);
+  panel.style.display='block';
+  tsOpenTarget = target;
+  syncTextStyleControls();
+  if(toggleEl){ const car = toggleEl.querySelector('.ts-caret'); if(car) car.textContent='⌃'; toggleEl.classList.add('active'); }
+}
+// Compat : ancien toggle -> ouvre le style du texte des pièces.
+function toggleTextStyle(){ openFieldStyle('rooms', document.getElementById('tsToggle')); }
+function updateTS(prop, val){ if(isNaN(val) && typeof val==='number') return; textStyle[prop] = val; tsRefresh(); }
+function setTSColor(v){
+  const hex = (v && v[0] !== '#') ? ('#'+v) : v;
+  textStyle.color = hex;
+  const c = document.getElementById('ts-color'), h = document.getElementById('ts-color-hex');
+  if(/^#[0-9a-fA-F]{6}$/.test(hex)){ if(c) c.value = hex; }
+  if(h && h.value !== v) h.value = v;
+  tsRefresh();
+}
+function toggleTS(prop, btn){ textStyle[prop] = !textStyle[prop]; btn.classList.toggle('on', textStyle[prop]); tsRefresh(); }
+function setTSAlign(v){ textStyle.align = v; document.querySelectorAll('#ts-align .ts-tog').forEach(b=>b.classList.toggle('on', b.dataset.v===v)); tsRefresh(); }
+function setTSBlock(v){ textStyle.blockPos = v; document.querySelectorAll('#ts-blockpos .ts-tog').forEach(b=>b.classList.toggle('on', b.dataset.v===v)); tsRefresh(); }
+
+function setTSTarget(t){
+  if(!textStyles[t]) return;
+  tsTarget = t;
+  textStyle = textStyles[t];
+  syncTextStyleControls();
+}
+const TS_LABELS = { name:'Nom de la villa', tagline:'Tagline', descShort:'Description courte', desc:'Description complète', rooms:'Texte des pièces (photos)' };
+function syncTextStyleControls(){
+  const g = id => document.getElementById(id);
+  if(!g('ts-size')) return;
+  const lbl = g('ts-target-name'); if(lbl) lbl.textContent = '✎ Style : ' + (TS_LABELS[tsTarget]||tsTarget);
+  g('ts-size').value = textStyle.size;
+  g('ts-color').value = /^#[0-9a-fA-F]{6}$/.test(textStyle.color) ? textStyle.color : '#ffffff';
+  g('ts-color-hex').value = textStyle.color;
+  g('ts-opacity').value = textStyle.opacity;
+  g('ts-font').value = textStyle.font;
+  g('ts-bold').classList.toggle('on', !!textStyle.bold);
+  g('ts-italic').classList.toggle('on', !!textStyle.italic);
+  g('ts-spacing').value = textStyle.spacing;
+  g('ts-lh').value = textStyle.lineHeight;
+  g('ts-maxw').value = textStyle.maxWidth;
+  g('ts-offsety').value = textStyle.offsetY;
+  g('ts-mtop').value = textStyle.marginTop;
+  g('ts-mbot').value = textStyle.marginBottom;
+  document.querySelectorAll('#ts-align .ts-tog').forEach(b=>b.classList.toggle('on', b.dataset.v===textStyle.align));
+  document.querySelectorAll('#ts-blockpos .ts-tog').forEach(b=>b.classList.toggle('on', b.dataset.v===textStyle.blockPos));
+}
+function resetTextStyle(){ Object.assign(textStyle, DEFAULT_TEXT_STYLES[tsTarget]); syncTextStyleControls(); tsRefresh(); }
+function applyTextStyle(){ syncTextStyleControls(); tsRefresh(); }
+
+/* ---------- Sections visibles (afficher / masquer chaque partie du PDF) ---------- */
+const SECTION_DEFS = [
+  {key:'cover',       icon:'🖼', name:'Couverture'},
+  {key:'facts',       icon:'📊', name:'Faits clés'},
+  {key:'description', icon:'📄', name:'Description'},
+  {key:'rooms',       icon:'🛏', name:'Pièces & Espaces'},
+  {key:'gallery',     icon:'🏞', name:'Galerie'},
+  {key:'contact',     icon:'📞', name:'Contact'}
+];
+let sectionVis = { cover:true, facts:true, description:true, rooms:true, gallery:true, contact:true };
+function secOn(key){ return sectionVis[key] !== false; }
+function renderSectionVis(){
+  const wrap = document.getElementById('sectionVisList'); if(!wrap) return;
+  wrap.innerHTML = '';
+  SECTION_DEFS.forEach(s=>{
+    const on = secOn(s.key);
+    const row = document.createElement('div');
+    row.className = 'secvis-row' + (on ? '' : ' off');
+    row.innerHTML = `<span class="ic">${s.icon}</span><span class="nm">${s.name}</span><button type="button" class="eye" title="${on?'Visible sur le PDF':'Masqué du PDF'}" onclick="toggleSectionVis('${s.key}')">${on?'👁':'🚫'}</button>`;
+    wrap.appendChild(row);
+  });
+}
+function toggleSectionVis(key){
+  sectionVis[key] = (sectionVis[key] === false);
+  renderSectionVis();
+  render();
+  renderRoomPages();
+}
+
+function switchSubtab(name){
+  document.querySelectorAll('.subtab-btn').forEach(b=>b.classList.toggle('on', b.dataset.panel===name));
+  document.querySelectorAll('.tabpanel').forEach(p=>p.classList.toggle('active', p.id === 'panel-'+name));
+}
+
+const DEFAULT_ROOM_NAMES = [
+  {name:'Salon', subtitle:''},
+  {name:'Salle à manger', subtitle:''},
+  {name:'Cuisine', subtitle:''},
+  {name:'Chambre 1', subtitle:'Suite parentale'},
+  {name:'Chambre 2', subtitle:''},
+  {name:'Chambre 3', subtitle:''},
+  {name:'Chambre 4', subtitle:''},
+  {name:'Chambre 5', subtitle:''},
+  {name:'Salle de bain 1', subtitle:''},
+  {name:'Salle de bain 2', subtitle:''},
+  {name:'Terrasse', subtitle:''},
+  {name:'Piscine', subtitle:''}
+];
+function seedDefaultRooms(){
+  rooms = DEFAULT_ROOM_NAMES.map(d => ({id:'r'+(roomIdSeq++), name:d.name, subtitle:d.subtitle, desc:'', photo:null, visible:true}));
+}
+
+function addRoom(){
+  rooms.push({id:'r'+(roomIdSeq++), name:'', subtitle:'', desc:'', photo:null, visible:true});
+  renderRooms();
+}
+function removeRoom(id){ rooms = rooms.filter(r=>r.id!==id); renderRooms(); }
+function updateRoom(id, field, value){ const r = rooms.find(r=>r.id===id); if(r) r[field]=value; renderRoomPages(); }
+function toggleRoomVisible(id){ const r = rooms.find(r=>r.id===id); if(r){ r.visible = !r.visible; renderRooms(); } }
+
+let draggedRoomId = null;
+function roomDragStart(id){ draggedRoomId = id; }
+function roomDrop(targetId){
+  if(!draggedRoomId || draggedRoomId===targetId) return;
+  const fromIdx = rooms.findIndex(r=>r.id===draggedRoomId);
+  const toIdx = rooms.findIndex(r=>r.id===targetId);
+  if(fromIdx<0 || toIdx<0) return;
+  const [moved] = rooms.splice(fromIdx,1);
+  rooms.splice(toIdx,0,moved);
+  draggedRoomId = null;
+  renderRooms();
+}
+
+function renderRooms(){
+  const wrap = document.getElementById('roomsList');
+  wrap.innerHTML = '';
+  document.getElementById('roomsCount').textContent = rooms.length + '/' + rooms.length;
+  if(rooms.length===0){ wrap.innerHTML = '<div class="hint" style="margin-top:0;">Aucune pièce ajoutée pour l\'instant. Cliquez sur « + Ajouter ».</div>'; return; }
+  rooms.forEach((r)=>{
+    const card = document.createElement('div');
+    card.className = 'room-card';
+    card.draggable = true;
+    card.ondragstart = ()=>{ roomDragStart(r.id); card.classList.add('dragging'); };
+    card.ondragend = ()=>{ card.classList.remove('dragging'); };
+    card.ondragover = (e)=>{ e.preventDefault(); };
+    card.ondrop = (e)=>{ e.preventDefault(); roomDrop(r.id); };
+    const photoInner = r.photo ? `<img src="${r.photo}">` : `<div class="rp-empty">🖼️</div>`;
+    card.innerHTML = `
+      <div class="room-drag">⠿⠿</div>
+      <div class="room-photo" onclick="openPhotoPicker('${r.id}')">${photoInner}</div>
+      <div class="room-main">
+        <div class="room-top-row">
+          <div class="room-fields">
+            <input type="text" placeholder="Nom de la pièce" value="${(r.name||'').replace(/"/g,'&quot;')}" oninput="updateRoom('${r.id}','name',this.value)">
+            <input type="text" placeholder="Sous-titre (optionnel)" value="${(r.subtitle||'').replace(/"/g,'&quot;')}" oninput="updateRoom('${r.id}','subtitle',this.value)">
+          </div>
+          <div class="room-icons">
+            <button class="room-icon-btn ${r.visible?'':'dim'}" title="${r.visible?'Visible sur le PDF':'Masquée du PDF'}" onclick="toggleRoomVisible('${r.id}')">${r.visible?'👁':'🚫'}</button>
+            <button class="room-icon-btn trash" title="Supprimer" onclick="removeRoom('${r.id}')">🗑</button>
+          </div>
+        </div>
+        <div class="room-desc-wrap">
+          <textarea placeholder="Description de la pièce..." oninput="updateRoom('${r.id}','desc',this.value)">${r.desc||''}</textarea>
+          <button class="room-ai-btn" title="Générer avec l'IA à partir de la photo" onclick="generateRoomDescription('${r.id}', this)">✨</button>
+        </div>
+      </div>
+    `;
+    wrap.appendChild(card);
+  });
+  renderRoomPages();
+}
+
+function renderGalleryPage(){
+  const container = document.getElementById('galleryPageContainer');
+  if(!container) return;
+  container.innerHTML = '';
+  if(!secOn('gallery')) return;
+  const requestedSlots = Math.max((galleryCount||6), 0);
+  const availablePhotos = photos.slice(1).filter(Boolean);
+  const galSlots = Math.min(requestedSlots, availablePhotos.length);
+  const galPhotos = availablePhotos.slice(0, galSlots);
+  const hasAny = galPhotos.length > 0;
+  if(galSlots===0 || !hasAny) return;
+
+  const label = document.createElement('div');
+  label.className = 'preview-label';
+  label.textContent = 'Aperçu — Galerie (page finale)';
+  container.appendChild(label);
+
+  const cols = galSlots > 6 ? 3 : 2;
+  const headerH = 130;
+  const gapPx = 6;
+  const sidePad = 26;
+  const cellW = (794 - 2*sidePad - (cols-1)*gapPx) / cols;
+  const cellH = cellW / 1.5;   // format paysage 3:2 — photos moins carrées
+
+  const scaleWrap = document.createElement('div'); scaleWrap.className = 'page-scale-wrap';
+  const scaleInner = document.createElement('div'); scaleInner.className = 'page-scale-inner';
+  const page = document.createElement('div');
+  page.className = 'room-export-page';
+  page.style.cssText = `width:var(--page-w);height:var(--page-h);background:#000;display:flex;flex-direction:column;justify-content:center;`;
+
+  const header = document.createElement('div');
+  header.style.cssText = `height:${headerH}px;display:flex;flex-direction:column;align-items:center;justify-content:center;`;
+  header.innerHTML = `
+    <div style="width:100%;text-align:center;font-family:'Space Mono',monospace;font-size:20px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold-light);">Visual Tour</div>
+  `;
+  page.appendChild(header);
+
+  const grid = document.createElement('div');
+  grid.style.cssText = `display:grid;grid-template-columns:repeat(${cols},minmax(0,1fr));gap:${gapPx}px;background:#000;width:100%;padding:0 ${sidePad}px;overflow:hidden;`;
+  galPhotos.forEach(src=>{
+    const img = document.createElement('img');
+    img.src = src;
+    img.style.cssText = `width:100%;min-width:0;height:${cellH}px;object-fit:cover;display:block;`;
+    grid.appendChild(img);
+  });
+  page.appendChild(grid);
+
+  // Bloc contact sous les photos de la galerie
+  const cEmail = val('f-contact-email'), cPhone = val('f-contact-phone'), cWeb = val('f-contact-web');
+  if(secOn('contact') && (cEmail || cPhone || cWeb)){
+    const esc = s => s.replace(/</g,'&lt;');
+    const lines = [];
+    if(cPhone) lines.push(esc(cPhone));
+    if(cEmail) lines.push(esc(cEmail));
+    if(cWeb) lines.push(esc(cWeb));
+    const contact = document.createElement('div');
+    contact.style.cssText = `margin-top:26px;text-align:center;padding:0 40px;`;
+    contact.innerHTML = `
+      <div style="width:100%;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-light);margin-bottom:10px;">Contact</div>
+      ${lines.map(l=>`<div style="width:100%;font-family:var(--serif-font);font-style:italic;font-size:15px;color:#fff;line-height:1.55;">${l}</div>`).join('')}
+    `;
+    page.appendChild(contact);
+  }
+
+  // Logo (watermark) centré en bas de la page galerie
+  const galWm = (brandMode==='logo') ? logos.find(l=>l.id===watermarkLogoId) : null;
+  if(galWm){
+    const lw = document.createElement('img');
+    lw.src = galWm.src;
+    lw.style.cssText = `display:block;margin:22px auto 0;max-width:110px;max-height:56px;object-fit:contain;opacity:.92;`;
+    page.appendChild(lw);
+  }
+
+  scaleInner.appendChild(page);
+  scaleWrap.appendChild(scaleInner);
+  container.appendChild(scaleWrap);
+}
+
+function renderRoomPages(){
+  const container = document.getElementById('roomPagesContainer');
+  if(!container) return;
+  container.innerHTML = '';
+  if(!secOn('rooms')) return;
+  const wmLogo = (brandMode==='logo') ? logos.find(l=>l.id===watermarkLogoId) : null;
+  const visibleRooms = rooms.filter(r => r.visible!==false && r.photo);
+  if(visibleRooms.length===0) return;
+  const size = Math.max(piecesPerPage||1, 1);
+
+  let globalRoomIdx = 0;
+
+  // === UNE SEULE PAGE CONTINUE pour toutes les photos des pièces ===
+  // Toutes les photos sont empilées sur la même page : il n'y a donc AUCUNE coupure de page
+  // entre elles, donc AUCUNE bande blanche. Seul le bandeau noir uniforme les sépare.
+  const framePx = 14;                         // épaisseur du bandeau noir, identique partout
+  const perPage = Math.max(size, 1);          // taille des photos : chacune = 1/perPage d'une hauteur A4
+  const slotH = (1123 - (perPage+1)*framePx) / perPage;
+  const n = visibleRooms.length;
+  const pageH = Math.round(n*slotH + (n+1)*framePx);
+  const topOffset = framePx;
+
+  const wrapDiv = document.createElement('div');
+  const label = document.createElement('div');
+  label.className = 'preview-label';
+  label.textContent = 'Aperçu — Pièces (page continue)';
+  wrapDiv.appendChild(label);
+
+  const scaleWrap = document.createElement('div'); scaleWrap.className = 'page-scale-wrap';
+  scaleWrap.style.height = 'calc(' + pageH + 'px * var(--preview-scale))';
+  const scaleInner = document.createElement('div'); scaleInner.className = 'page-scale-inner';
+  scaleInner.style.height = pageH + 'px';
+  const page = document.createElement('div');
+  page.className = 'room-export-page';
+  page.style.width = 'var(--page-w)';
+  page.style.height = pageH + 'px';
+  page.style.display = 'flex';
+  page.style.flexDirection = 'column';
+  page.style.background = '#000';
+  page.style.gap = framePx+'px';
+  page.style.padding = framePx+'px 0';
+  page.style.boxSizing = 'border-box';
+
+  const roomLayout = [];
+  visibleRooms.forEach(r=>{
+    globalRoomIdx++;
+    roomLayout.push({ name: r.name||'', subtitle: r.subtitle||'', desc: r.desc||'', gIdx: globalRoomIdx });
+    const slot = document.createElement('div');
+    slot.style.cssText = `height:${slotH}px;flex-shrink:0;position:relative;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;`;
+    const photoWrap = `position:relative;width:100%;height:100%;overflow:hidden;background:#241A12;`;
+    const nameSize = perPage===1 ? '13px' : (perPage===2 ? '11.5px' : '10px');
+    const RS = textStyles.rooms;
+    let bp = RS.blockPos, al = RS.align;
+    if(bp === 'alt'){ const side = (globalRoomIdx % 2 === 1) ? 'right' : 'left'; bp = side; al = side; }
+    const pad = perPage===1 ? 48 : 28;
+    const maxW = Math.max(60, RS.maxWidth||520);
+    const vShift = (RS.offsetY||0) + (RS.marginTop||0) - (RS.marginBottom||0);
+    let overlayPos;
+    if(bp==='center'){ overlayPos = `left:50%;top:40%;transform:translate(-50%,calc(-50% + ${vShift}px));width:${maxW}px;max-width:88%;`; }
+    else if(bp==='right'){ overlayPos = `right:${pad}px;top:40%;transform:translateY(calc(-50% + ${vShift}px));width:${maxW}px;max-width:78%;`; }
+    else { overlayPos = `left:${pad}px;top:40%;transform:translateY(calc(-50% + ${vShift}px));width:${maxW}px;max-width:78%;`; }
+    const gradientDir = bp==='right' ? '255deg' : (bp==='center' ? '180deg' : '105deg');
+    const fam = tsFontCss(RS);
+    const col = hexWithOpacity(RS.color, RS.opacity);
+    const fw = RS.bold ? '700' : '400';
+    const fst = RS.italic ? 'italic' : 'normal';
+    const escName = (r.name||'').replace(/</g,'&lt;');
+    const escSub = (r.subtitle||'').replace(/</g,'&lt;');
+    const escDesc = (r.desc||'').replace(/</g,'&lt;');
+    const hasText = escName || escSub || escDesc;
+    slot.innerHTML = `
+      <div style="${photoWrap}">
+      ${r.photo ? `<img src="${r.photo}" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#5c6b7d;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.1em;">PHOTO</div>`}
+      ${hasText ? `
+      <div style="position:absolute;inset:0;background:linear-gradient(${gradientDir}, rgba(26,20,15,.55) 0%, rgba(26,20,15,.28) 40%, rgba(26,20,15,0) 62%);"></div>
+      <div class="room-text-overlay" style="position:absolute;${overlayPos}text-align:${al};">
+        ${escName ? `<div style="font-family:'Space Mono',monospace;font-size:${nameSize};letter-spacing:.14em;text-transform:uppercase;color:var(--gold-light);margin-bottom:10px;">${escName}${escSub ? ' — '+escSub : ''}</div>` : ''}
+        ${escDesc ? `<div style="font-family:${fam};font-style:${fst};font-weight:${fw};font-size:${RS.size}px;line-height:${RS.lineHeight};letter-spacing:${RS.spacing}px;color:${col};">${escDesc}</div>` : ''}
+      </div>` : ''}
+      ${wmLogo ? `<img src="${wmLogo.src}" style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);max-width:100px;max-height:52px;object-fit:contain;opacity:.92;z-index:4;">` : ''}
+      </div>
+    `;
+    page.appendChild(slot);
+  });
+  page._roomLayout = roomLayout;
+  page._slotH = slotH;
+  page._gap = framePx;
+  page._topOffset = topOffset;
+  page._pageH = pageH;
+
+  scaleInner.appendChild(page);
+  scaleWrap.appendChild(scaleInner);
+  wrapDiv.appendChild(scaleWrap);
+  container.appendChild(wrapDiv);
+}
+
+let photoPickerTargetId = null;
+function openPhotoPicker(roomId){
+  photoPickerTargetId = roomId;
+  const grid = document.getElementById('photoPickerGrid');
+  grid.innerHTML = '';
+  if(photos.length===0){
+    grid.innerHTML = '<div class="hint" style="margin:0;">Aucune photo dans la galerie. Ajoutez-en depuis l\'onglet Médias.</div>';
+  } else {
+    photos.forEach(src=>{
+      const t = document.createElement('div');
+      t.className = 'picker-thumb';
+      t.innerHTML = `<img src="${src}">`;
+      t.onclick = ()=>{ const r = rooms.find(r=>r.id===photoPickerTargetId); if(r){ r.photo = src; renderRooms(); } closePhotoPicker(); };
+      grid.appendChild(t);
+    });
+  }
+  document.getElementById('photoPickerOverlay').classList.add('show');
+}
+function closePhotoPicker(){ document.getElementById('photoPickerOverlay').classList.remove('show'); photoPickerTargetId = null; }
+
+async function generateRoomDescription(roomId, btnEl){
+  const r = rooms.find(r=>r.id===roomId);
+  if(!r || !r.photo){ alert('Assignez d\'abord une photo à cette pièce.'); return; }
+  if(!r.photo.startsWith('data:image')){ alert("La génération automatique fonctionne pour l'instant uniquement avec des photos importées (pas les photos ajoutées par URL)."); return; }
+  const match = r.photo.match(/^data:(image\/[a-zA-Z]+);base64,(.*)$/);
+  if(!match){ alert('Format de photo non pris en charge pour la génération.'); return; }
+  const [, mediaType, base64Data] = match;
+  const oldLabel = btnEl.textContent;
+  btnEl.disabled = true; btnEl.textContent = '⏳';
+  try{
+    const response = await fetch("/api/generate-description", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + AUTH_TOKEN },
+      body: JSON.stringify({ mediaType, base64Data })
+    });
+    const data = await response.json();
+    if(!response.ok){ throw new Error(data.error || 'Erreur'); }
+    const text = (data.text || '').trim();
+    if(text){
+      r.desc = text;
+      renderRooms();
+    } else {
+      alert("La génération n'a rien renvoyé. Réessayez.");
+    }
+  } catch(err){
+    console.error(err);
+    alert("Impossible de générer la description.\n\nRaison exacte : " + (err && err.message ? err.message : err) + "\n\n(Si ça indique « Non authentifié » : déconnecte-toi puis reconnecte-toi.)");
+  } finally {
+    btnEl.disabled = false; btnEl.textContent = oldLabel;
+  }
+}
+
+function addSection(){
+  sections.push({id:'s'+(sectionIdSeq++), title:'', content:''});
+  renderSections();
+}
+function removeSection(id){ sections = sections.filter(s=>s.id!==id); renderSections(); }
+function updateSection(id, field, value){ const s = sections.find(s=>s.id===id); if(s) s[field]=value; }
+function renderSections(){
+  const wrap = document.getElementById('sectionsList');
+  wrap.innerHTML = '';
+  if(sections.length===0){ wrap.innerHTML = '<div class="hint" style="margin-top:0;">Aucune section ajoutée pour l\'instant.</div>'; return; }
+  sections.forEach((s,i)=>{
+    const card = document.createElement('div');
+    card.className = 'list-card';
+    card.innerHTML = `
+      <div class="list-card-head"><span>Section ${i+1}</span><button class="rm-list" onclick="removeSection('${s.id}')">Supprimer</button></div>
+      <label>Titre</label>
+      <input type="text" placeholder="Accès & transferts" value="${s.title.replace(/"/g,'&quot;')}" oninput="updateSection('${s.id}','title',this.value)">
+      <label>Contenu</label>
+      <textarea placeholder="Détails à communiquer aux voyageurs..." oninput="updateSection('${s.id}','content',this.value)">${s.content}</textarea>
+    `;
+    wrap.appendChild(card);
+  });
+}
+
+function initAmenities(){
+  const wrap = document.getElementById('amenities');
+  AMENITIES.forEach(a=>{
+    const chip = document.createElement('label');
+    chip.className = 'chip';
+    chip.innerHTML = `<input type="checkbox"> ${a}`;
+    const cb = chip.querySelector('input');
+    cb.addEventListener('change', e=>{
+      if(e.target.checked){selectedAmenities.add(a); chip.classList.add('on');}
+      else{selectedAmenities.delete(a); chip.classList.remove('on');}
+      render();
+    });
+    amenityChipEls[a] = {chip, cb};
+    wrap.appendChild(chip);
+  });
+}
+
+document.querySelectorAll('.toggle-opt').forEach(opt=>{
+  opt.addEventListener('click', ()=>setBrandMode(opt.dataset.mode));
+});
+function setBrandMode(mode){
+  brandMode = mode;
+  document.querySelectorAll('.toggle-opt').forEach(o=>o.classList.toggle('on', o.dataset.mode===mode));
+  const logoField = document.getElementById('logoField');
+  const logoDrop = document.getElementById('logoDrop');
+  if(brandMode === 'whitelabel'){ logoField.style.opacity = '.45'; logoDrop.classList.add('disabled'); }
+  else{ logoField.style.opacity = '1'; logoDrop.classList.remove('disabled'); }
+  render();
+}
+
+function switchTab(tab){
+  document.getElementById('tab-editor').classList.toggle('on', tab==='editor');
+  document.getElementById('tab-new').classList.remove('on');
+  document.getElementById('tab-catalog').classList.toggle('on', tab==='catalog');
+  document.getElementById('editorView').style.display = tab==='editor' ? 'flex' : 'none';
+  document.getElementById('catalogView').style.display = tab==='catalog' ? 'block' : 'none';
+  if(tab==='catalog') refreshCatalog();
+}
+
+function handleLogoFiles(e){
+  const files = Array.from(e.target.files);
+  files.forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      const id = 'lg'+(logoIdSeq++);
+      logos.push({id, src: ev.target.result});
+      if(!coverLogoId) coverLogoId = id;
+      if(!watermarkLogoId) watermarkLogoId = id;
+      renderLogoGallery();
+      render();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+}
+function removeLogoFromGallery(id){
+  logos = logos.filter(l=>l.id!==id);
+  if(coverLogoId===id) coverLogoId = logos[0] ? logos[0].id : null;
+  if(watermarkLogoId===id) watermarkLogoId = logos[0] ? logos[0].id : null;
+  renderLogoGallery();
+  render();
+}
+function renderLogoGallery(){
+  const grid = document.getElementById('logoGrid');
+  grid.innerHTML = '';
+  logos.forEach(l=>{
+    const card = document.createElement('div');
+    card.className = 'logo-card';
+    card.innerHTML = `<img src="${l.src}"><div class="logo-rm" onclick="removeLogoFromGallery('${l.id}')">✕</div>`;
+    grid.appendChild(card);
+  });
+  const coverSel = document.getElementById('f-cover-logo');
+  const wmSel = document.getElementById('f-watermark-logo');
+  const optionsHtml = logos.length
+    ? logos.map((l,i)=>`<option value="${l.id}">Logo ${i+1}</option>`).join('')
+    : '<option value="">Aucun logo</option>';
+  coverSel.innerHTML = optionsHtml;
+  wmSel.innerHTML = optionsHtml;
+  if(coverLogoId) coverSel.value = coverLogoId;
+  if(watermarkLogoId) wmSel.value = watermarkLogoId;
+}
+function updateCoverLogo(id){ coverLogoId = id || null; render(); }
+function updateWatermarkLogo(id){ watermarkLogoId = id || null; render(); }
+function updateLogoSize(v){ logoSize = parseInt(v,10); document.getElementById('logoSizeLabel').textContent = logoSize+'px'; render(); }
+function updateGalleryCount(v){ galleryCount = parseInt(v,10); render(); }
+function updatePiecesPerPage(v){ piecesPerPage = parseInt(v,10); renderRoomPages(); }
+
+function compressImage(file, maxDim, quality){
+  return new Promise((resolve)=>{
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let { width, height } = img;
+        if(width > maxDim || height > maxDim){
+          if(width >= height){ height = Math.round(height * (maxDim/width)); width = maxDim; }
+          else { width = Math.round(width * (maxDim/height)); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        try{
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } catch(e){
+          resolve(ev.target.result); // fallback to original if canvas export fails (e.g. tainted canvas)
+        }
+      };
+      img.onerror = ()=> resolve(ev.target.result);
+      img.src = ev.target.result;
+    };
+    reader.onerror = ()=> resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
+function handlePhotos(e){
+  const files = Array.from(e.target.files);
+  files.forEach(async file=>{
+    const compressed = await compressImage(file, 1920, 0.85);
+    if(compressed){ photos.push(compressed); renderThumbs(); render(); }
+  });
+  e.target.value = '';
+}
+function renderThumbs(){
+  const wrap = document.getElementById('thumbs');
+  wrap.innerHTML = '';
+  document.getElementById('mediaCount').textContent = photos.length;
+  if(photos.length === 0){
+    wrap.innerHTML = '<div class="media-empty">Aucune image ajoutée pour l\'instant.</div>';
+    return;
+  }
+  photos.forEach((src,i)=>{
+    const t = document.createElement('div');
+    t.className = 'media-item';
+    t.onclick = (e)=>{ if(e.target.closest('.media-rm')) return; setCover(i); };
+    t.innerHTML = `<img src="${src}">
+      ${i===0 ? '<div class="media-cover-badge">Couverture</div>' : ''}
+      <div class="media-num">#${i+1}</div>
+      <div class="media-rm" onclick="removePhoto(${i})">✕</div>`;
+    wrap.appendChild(t);
+  });
+}
+function setCover(i){
+  if(i === 0) return;
+  const [chosen] = photos.splice(i,1);
+  photos.unshift(chosen);
+  renderThumbs();
+  render();
+}
+function addPhotoByUrl(){
+  const url = prompt("Collez l'URL de l'image :");
+  if(url && url.trim()){
+    photos.push(url.trim());
+    renderThumbs();
+    render();
+  }
+}
+function removePhoto(i){ photos.splice(i,1); renderThumbs(); render(); }
+
+// Télécharge toutes les photos (galerie / médias) sur l'ordinateur, en un seul fichier .zip.
+async function downloadAllPhotos(){
+  if(!photos.length){ alert("Aucune photo à télécharger. Ajoutez d'abord des photos dans Médias."); return; }
+  const btn = document.getElementById('dlPhotosBtn');
+  const old = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = '… préparation'; }
+  const base = (val('f-name')||'villa').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'villa';
+  try{
+    // Méthode privilégiée : un seul fichier .zip contenant toutes les photos.
+    if(window.JSZip){
+      const zip = new JSZip();
+      const folder = zip.folder('photos-'+base);
+      let added = 0;
+      for(let i=0;i<photos.length;i++){
+        try{
+          const resp = await fetch(photos[i]);
+          const blob = await resp.blob();
+          const ext = ((blob.type||'image/jpeg').split('/')[1]||'jpg').replace('jpeg','jpg').replace('+xml','');
+          folder.file('photo-'+String(i+1).padStart(2,'0')+'.'+ext, blob);
+          added++;
+        }catch(e){ console.warn('Photo '+(i+1)+' non récupérée (URL externe ?)', e); }
+      }
+      if(added===0) throw new Error('Aucune photo récupérable');
+      const zipBlob = await zip.generateAsync({type:'blob'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(zipBlob);
+      a.download = 'photos-'+base+'.zip';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+    } else {
+      // Repli : téléchargement des photos une par une.
+      for(let i=0;i<photos.length;i++){
+        const a = document.createElement('a');
+        a.href = photos[i];
+        const m = /^data:(image\/[\w+]+)/.exec(photos[i]);
+        const ext = m ? m[1].split('/')[1].replace('jpeg','jpg').replace('+xml','') : 'jpg';
+        a.download = 'photo-'+String(i+1).padStart(2,'0')+'.'+ext;
+        document.body.appendChild(a); a.click(); a.remove();
+        await new Promise(r=>setTimeout(r, 350));
+      }
+    }
+  }catch(err){
+    console.error(err);
+    alert("Impossible de préparer le téléchargement : " + (err && err.message ? err.message : err));
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = old || '⬇ Télécharger'; }
+  }
+}
+
+function val(id){ return document.getElementById(id).value.trim(); }
+function setVal(id, v){ document.getElementById(id).value = v || ''; }
+function initials(name){
+  const words = name.split(/\s+/).filter(Boolean);
+  if(words.length === 0) return "VA";
+  if(words.length === 1) return words[0].slice(0,2).toUpperCase();
+  return (words[0][0] + words[words.length-1][0]).toUpperCase();
+}
+
+function render(){
+  const name = val('f-name') || 'Villa Sans Nom';
+  const loc = val('f-loc') || 'Localisation à préciser';
+  const region = val('f-region');
+  const locDisplay = region ? (loc + ', ' + region) : loc;
+  const desc = val('f-desc');
+  const bed = val('f-bed') || '–';
+  const bath = val('f-bath') || '–';
+  const guests = val('f-guests') || '–';
+  const surface = val('f-surface') ? val('f-surface') + 'm²' : '–';
+  const pn = val('f-pricenight') || '— / nuit';
+  const pw = val('f-priceweek') || '—';
+  const tagline = val('f-tagline');
+  const descShort = val('f-desc-short');
+  const cname = val('f-cname') || 'Conciergerie';
+  const cphone = val('f-cphone') || '—';
+  const cemail = val('f-cemail') || '—';
+
+  const escName = name.replace(/</g,'&lt;');
+  const escLoc = locDisplay.replace(/</g,'&lt;');
+  const escTagline = tagline.replace(/</g,'&lt;');
+  const NS = textStyles.name;
+  const nameCss = `font-family:${tsFontCss(NS)};font-size:${NS.size}px;color:${hexWithOpacity(NS.color,NS.opacity)};font-weight:${NS.bold?'700':'400'};font-style:${NS.italic?'italic':'normal'};letter-spacing:${NS.spacing}px;`;
+  const TS = textStyles.tagline;
+  const tagCss = `font-family:${tsFontCss(TS)};font-size:${TS.size}px;color:${hexWithOpacity(TS.color,TS.opacity)};font-weight:${TS.bold?'700':'400'};font-style:${TS.italic?'italic':'normal'};letter-spacing:${TS.spacing}px;`;
+  document.getElementById('p1-hero-text').innerHTML = `
+    <h2 style="${nameCss}">${escName}</h2>
+    ${escTagline ? `<div class="tagline" style="${tagCss}">${escTagline}</div>` : ''}
+    <div class="loc">${escLoc}</div>
+  `;
+
+  document.getElementById('p1-stats-band').innerHTML = `
+    <div class="stat"><div class="num">${guests}</div><div class="lbl">Voyageurs</div></div>
+    <div class="stat"><div class="num">${bed}</div><div class="lbl">Chambres</div></div>
+    <div class="stat"><div class="num">${bath}</div><div class="lbl">Sdb</div></div>
+    <div class="stat"><div class="num">${surface}</div><div class="lbl">Surface</div></div>
+  `;
+
+  const descText = desc ? desc.replace(/</g,'&lt;') : 'La description de la villa apparaîtra ici.';
+  const DS = textStyles.desc;
+  const descCss = `font-family:${tsFontCss(DS)};font-size:${DS.size}px;color:${hexWithOpacity(DS.color,DS.opacity)};font-weight:${DS.bold?'700':'400'};font-style:${DS.italic?'italic':'normal'};letter-spacing:${DS.spacing}px;line-height:${DS.lineHeight};text-align:${DS.align};`;
+  const SS = textStyles.descShort;
+  const escShort = descShort ? descShort.replace(/</g,'&lt;') : '';
+  const shortCss = `font-family:${tsFontCss(SS)};font-size:${SS.size}px;color:${hexWithOpacity(SS.color,SS.opacity)};font-weight:${SS.bold?'700':'400'};font-style:${SS.italic?'italic':'normal'};letter-spacing:${SS.spacing}px;line-height:${SS.lineHeight};text-align:${SS.align};margin-bottom:14px;`;
+  document.getElementById('p1-body').innerHTML =
+    (escShort ? `<div class="p-desc-short" style="${shortCss}">${escShort}</div>` : '') +
+    `<div class="p-desc${desc?'':' placeholder'}" style="${descCss}">${descText}</div>`;
+
+  document.getElementById('p1-brand').textContent = cname;
+
+  const hero = document.getElementById('hero');
+  const existingImg = hero.querySelector('img');
+  if(photos.length){
+    if(existingImg){ existingImg.src = photos[0]; }
+    else{ const img = document.createElement('img'); img.src = photos[0]; hero.insertBefore(img, hero.firstChild); }
+    document.getElementById('hero-empty').style.display = 'none';
+  } else {
+    if(existingImg) existingImg.remove();
+    document.getElementById('hero-empty').style.display = 'flex';
+  }
+
+  let heroLogo = hero.querySelector('.hero-logo');
+  const coverLogo = logos.find(l=>l.id===coverLogoId);
+  const watermarkLogo = logos.find(l=>l.id===watermarkLogoId);
+  const showLogo = (brandMode === 'logo' && coverLogo);
+  if(showLogo){
+    if(!heroLogo){ heroLogo = document.createElement('img'); heroLogo.className = 'hero-logo'; hero.appendChild(heroLogo); }
+    heroLogo.src = coverLogo.src; heroLogo.style.display = 'block';
+    heroLogo.style.maxWidth = logoSize+'px'; heroLogo.style.maxHeight = Math.round(logoSize*0.65)+'px';
+  } else {
+    if(heroLogo) heroLogo.remove();
+  }
+
+  // Visibilité des sections (aperçu)
+  document.getElementById('p1-stats-band').style.display = secOn('facts') ? '' : 'none';
+  document.getElementById('p1-body').style.display = secOn('description') ? '' : 'none';
+  const p1wrapEl = document.getElementById('page1').closest('.page-scale-wrap');
+  if(p1wrapEl && p1wrapEl.parentElement){ p1wrapEl.parentElement.style.display = secOn('cover') ? '' : 'none'; }
+
+  renderGalleryPage();
+}
+
+function collectFormData(){
+  return {
+    name: val('f-name'), tagline: val('f-tagline'), loc: val('f-loc'), region: val('f-region'),
+    descShort: val('f-desc-short'), desc: val('f-desc'),
+    guests: val('f-guests'), bed: val('f-bed'), bath: val('f-bath'), surface: val('f-surface'),
+    pricenight: val('f-pricenight'), priceweek: val('f-priceweek'),
+    cname: val('f-cname'), cphone: val('f-cphone'), cemail: val('f-cemail'),
+    amenities: Array.from(selectedAmenities), photos, brandMode,
+    logos, coverLogoId, watermarkLogoId, logoSize, galleryCount, piecesPerPage,
+    textStyle: Object.assign({}, textStyles.rooms),
+    textStyles: JSON.parse(JSON.stringify(textStyles)),
+    sectionVis: Object.assign({}, sectionVis),
+    contactEmail: val('f-contact-email'), contactPhone: val('f-contact-phone'), contactWeb: val('f-contact-web'),
+    rooms, sections, availability: val('f-availability'), status: document.getElementById('f-status').value,
+    updatedAt: Date.now()
+  };
+}
+
+function resetForm(){
+  ['f-name','f-tagline','f-loc','f-region','f-desc-short','f-desc','f-guests','f-bed','f-bath','f-surface','f-pricenight','f-priceweek','f-cname','f-cphone','f-cemail','f-availability'].forEach(id=>setVal(id,''));
+  selectedAmenities = new Set();
+  Object.values(amenityChipEls).forEach(({chip,cb})=>{ chip.classList.remove('on'); cb.checked = false; });
+  photos = []; renderThumbs();
+  logos = []; coverLogoId = null; watermarkLogoId = null; logoSize = 90; galleryCount = 6; piecesPerPage = 2;
+  document.getElementById('f-logo-size').value = 90; document.getElementById('logoSizeLabel').textContent = '90px';
+  document.getElementById('f-gallery-count').value = '6';
+  document.getElementById('f-pieces-per-page').value = '1';
+  renderLogoGallery();
+  setBrandMode('logo');
+  textStyles = freshTextStyles(); tsTarget = 'rooms'; textStyle = textStyles.rooms;
+  syncTextStyleControls();
+  sectionVis = { cover:true, facts:true, description:true, rooms:true, gallery:true, contact:true };
+  renderSectionVis();
+  setVal('f-contact-email',''); setVal('f-contact-phone',''); setVal('f-contact-web','');
+  seedDefaultRooms(); renderRooms();
+  sections = []; renderSections();
+  document.getElementById('f-status').value = 'brouillon';
+  currentVillaId = null;
+  document.getElementById('statusLine').textContent = 'Nouvelle villa (non enregistrée)';
+  switchSubtab('info');
+  render();
+}
+
+function loadFormData(data, id){
+  setVal('f-name', data.name); setVal('f-tagline', data.tagline); setVal('f-loc', data.loc); setVal('f-region', data.region);
+  setVal('f-desc-short', data.descShort); setVal('f-desc', data.desc);
+  setVal('f-guests', data.guests); setVal('f-bed', data.bed); setVal('f-bath', data.bath); setVal('f-surface', data.surface);
+  setVal('f-pricenight', data.pricenight); setVal('f-priceweek', data.priceweek);
+  setVal('f-cname', data.cname); setVal('f-cphone', data.cphone); setVal('f-cemail', data.cemail);
+  setVal('f-availability', data.availability);
+  document.getElementById('f-status').value = data.status || 'brouillon';
+
+  selectedAmenities = new Set(data.amenities || []);
+  Object.entries(amenityChipEls).forEach(([name,{chip,cb}])=>{
+    const on = selectedAmenities.has(name);
+    chip.classList.toggle('on', on); cb.checked = on;
+  });
+
+  photos = data.photos || []; renderThumbs();
+  logos = data.logos || []; coverLogoId = data.coverLogoId || null; watermarkLogoId = data.watermarkLogoId || null;
+  logoSize = data.logoSize || 90; galleryCount = data.galleryCount || 6; piecesPerPage = data.piecesPerPage || 1;
+  document.getElementById('f-logo-size').value = logoSize; document.getElementById('logoSizeLabel').textContent = logoSize+'px';
+  document.getElementById('f-gallery-count').value = String(galleryCount);
+  document.getElementById('f-pieces-per-page').value = String(piecesPerPage);
+  renderLogoGallery();
+  setBrandMode(data.brandMode || 'logo');
+
+  textStyles = freshTextStyles();
+  if(data.textStyles){ TS_TARGETS.forEach(k=>{ if(data.textStyles[k]) Object.assign(textStyles[k], data.textStyles[k]); }); }
+  else if(data.textStyle){ Object.assign(textStyles.rooms, data.textStyle); }
+  tsTarget = 'rooms'; textStyle = textStyles.rooms;
+  syncTextStyleControls();
+  sectionVis = Object.assign({ cover:true, facts:true, description:true, rooms:true, gallery:true, contact:true }, data.sectionVis || {});
+  renderSectionVis();
+  setVal('f-contact-email', data.contactEmail); setVal('f-contact-phone', data.contactPhone); setVal('f-contact-web', data.contactWeb);
+
+  rooms = data.rooms || []; renderRooms();
+  sections = data.sections || []; renderSections();
+
+  currentVillaId = id || null;
+  document.getElementById('statusLine').textContent = id ? ('Modification : ' + (data.name || 'villa')) : 'Nouvelle villa (non enregistrée)';
+  switchSubtab('info');
+  render();
+}
+
+async function duplicateVilla(){
+  const data = collectFormData();
+  data.name = (data.name || 'Villa') + ' (copie)';
+  try{
+    const res = await fetch('/api/villas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AUTH_TOKEN },
+      body: JSON.stringify({ data })
+    });
+    if(!res.ok) throw new Error('Échec de duplication');
+    const result = await res.json();
+    loadFormData(data, result.id);
+    document.getElementById('statusLine').textContent = 'Modification : ' + data.name + ' — dupliquée ✓';
+  } catch(err){
+    console.error(err);
+    alert("Impossible de dupliquer cette villa.");
+  }
+}
+
+async function saveVilla(){
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; const oldText = btn.textContent; btn.textContent = 'Enregistrement…';
+  try{
+    const data = collectFormData();
+    const res = await fetch('/api/villas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AUTH_TOKEN },
+      body: JSON.stringify({ id: currentVillaId || undefined, data })
+    });
+    if(!res.ok) throw new Error('Échec de sauvegarde');
+    const result = await res.json();
+    currentVillaId = result.id;
+    document.getElementById('statusLine').textContent = 'Modification : ' + (data.name || 'villa') + ' — enregistrée ✓';
+  } catch(err){
+    console.error(err);
+    alert("Impossible d'enregistrer la villa. Réessayez.");
+  } finally {
+    btn.disabled = false; btn.textContent = oldText;
+  }
+}
+
+async function refreshCatalog(){
+  const body = document.getElementById('catalogBody');
+  body.innerHTML = '<div class="catalog-empty">Chargement…</div>';
+  try{
+    const res = await fetch('/api/villas', { headers: { 'Authorization': 'Bearer ' + AUTH_TOKEN } });
+    if(!res.ok) throw new Error('Échec du chargement');
+    const { villas: rawVillas } = await res.json();
+    if(rawVillas.length === 0){
+      document.getElementById('catalogCount').textContent = '0 villa enregistrée';
+      body.innerHTML = '<div class="catalog-empty">Aucune villa enregistrée pour l\'instant. Remplissez une fiche puis cliquez sur « Enregistrer la villa ».</div>';
+      return;
+    }
+    const villas = rawVillas.map(v => ({ id: v.id, data: v }));
+    villas.sort((a,b)=> (b.data.updatedAt||0) - (a.data.updatedAt||0));
+    document.getElementById('catalogCount').textContent = villas.length + (villas.length>1 ? ' villas' : ' villa');
+    const grid = document.createElement('div');
+    grid.className = 'villa-grid';
+    villas.forEach(v=>{
+      const d = v.data;
+      const card = document.createElement('div');
+      card.className = 'villa-card';
+      const cover = (d.photos && d.photos[0]) ? `<img src="${d.photos[0]}">` : `<div class="vc-empty">PAS DE PHOTO</div>`;
+      const locText = d.region ? `${d.loc || ''}, ${d.region}` : (d.loc || 'Localisation non précisée');
+      const dateText = d.updatedAt ? new Date(d.updatedAt).toLocaleDateString('fr-FR') : '';
+      card.innerHTML = `
+        <div class="vc-cover"><span class="vc-badge">${d.status==='publie' ? 'Publié' : 'Brouillon'}</span>${cover}</div>
+        <div class="vc-body">
+          <div class="vc-name">${d.name || 'Villa sans nom'}</div>
+          <div class="vc-loc">📍 ${locText}</div>
+          <div class="vc-stats">
+            <div class="vc-stat-group">
+              <span>👤 ${d.guests||'–'}</span><span>🛏 ${d.bed||'–'}</span><span>📐 ${d.surface?d.surface+'m²':'–'}</span>
+            </div>
+            <span class="vc-date">${dateText}</span>
+          </div>
+          <div class="vc-actions">
+            <button class="vc-btn" onclick="openVilla('${v.id}')">Ouvrir</button>
+            <button class="vc-btn" onclick="pdfFromCatalog('${v.id}')">PDF</button>
+            <button class="vc-btn danger" onclick="deleteVilla('${v.id}')">Suppr.</button>
+          </div>
+        </div>`;
+      grid.appendChild(card);
+    });
+    body.innerHTML = '';
+    body.appendChild(grid);
+  } catch(err){
+    console.error(err);
+    body.innerHTML = '<div class="catalog-empty">Impossible de charger vos villas pour le moment.</div>';
+  }
+}
+
+async function openVilla(id){
+  try{
+    const res = await fetch('/api/villas/' + id, { headers: { 'Authorization': 'Bearer ' + AUTH_TOKEN } });
+    if(!res.ok) throw new Error('not found');
+    const { data } = await res.json();
+    loadFormData(data, id);
+    switchTab('editor');
+  } catch(err){
+    console.error(err);
+    alert("Impossible d'ouvrir cette villa.");
+  }
+}
+
+async function pdfFromCatalog(id){
+  await openVilla(id);
+  setTimeout(()=>{ generatePDF(); }, 150);
+}
+
+async function deleteVilla(id){
+  if(!confirm('Supprimer définitivement cette villa ?')) return;
+  try{
+    await fetch('/api/villas/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + AUTH_TOKEN } });
+    if(currentVillaId === id){ resetForm(); }
+    refreshCatalog();
+  } catch(err){
+    console.error(err);
+    alert("Impossible de supprimer cette villa.");
+  }
+}
+
+function openNewModal(){
+  document.getElementById('m-name').value = '';
+  document.getElementById('m-loc').value = '';
+  document.getElementById('m-region').value = '';
+  document.getElementById('newModal').classList.add('show');
+  setTimeout(()=>document.getElementById('m-name').focus(), 50);
+}
+function closeNewModal(){
+  document.getElementById('newModal').classList.remove('show');
+}
+async function confirmCreateVilla(){
+  const name = document.getElementById('m-name').value.trim();
+  const loc = document.getElementById('m-loc').value.trim();
+  const region = document.getElementById('m-region').value.trim();
+  if(!name || !loc){
+    alert('Le nom de la villa et la localisation sont obligatoires.');
+    return;
+  }
+  resetForm();
+  setVal('f-name', name); setVal('f-loc', loc); setVal('f-region', region);
+  render();
+  closeNewModal();
+  await saveVilla();
+  document.getElementById('tab-editor').classList.add('on');
+  document.getElementById('tab-catalog').classList.remove('on');
+  document.getElementById('editorView').style.display = 'flex';
+  document.getElementById('catalogView').style.display = 'none';
+}
+
+function newVilla(){ openNewModal(); }
+
+// Charge Playfair Display Italic (TTF) en base64 pour l'intégrer au PDF :
+// le texte des descriptions est alors ÉCRIT dans le PDF avec la vraie police (net, jamais superposé).
+// Charge en base64 le TTF italique de la police choisie (pour l'intégrer au PDF),
+// avec repli automatique sur Playfair puis Times si le fichier n'est pas trouvé.
+let _fontB64Cache = {};
+function _builtinStyleOf(s){ return (s.bold && s.italic) ? 'bolditalic' : (s.bold ? 'bold' : (s.italic ? 'italic' : 'normal')); }
+function _builtinStyle(){ return _builtinStyleOf(textStyle); }
+// Prépare la police d'un style donné dans le PDF (native jsPDF, ou TTF intégré) sous un nom VFS unique. Renvoie {name, style}.
+async function ensureFont(pdf, style, vfsName){
+  const cat = FONT_CATALOG[style.font] || FONT_CATALOG['Fraunces'];
+  if(cat.builtin){ return { name: cat.builtin, style: _builtinStyleOf(style) }; }
+  const useItal = !!style.italic;
+  const cands = (useItal ? (cat.ital||[]) : (cat.reg||cat.ital||[])).map(f => cat.dir + '/' + f)
+    .concat([ useItal ? 'ofl/playfairdisplay/static/PlayfairDisplay-Italic.ttf' : 'ofl/playfairdisplay/static/PlayfairDisplay-Regular.ttf' ]);
+  const cacheKey = style.font + (useItal ? '|i' : '|r');
+  let b64 = _fontB64Cache[cacheKey];
+  if(b64 === undefined){
+    b64 = '';
+    for(const p of cands){
+      try{
+        const resp = await fetch('https://cdn.jsdelivr.net/gh/google/fonts@main/' + p);
+        if(!resp.ok) continue;
+        const buf = await resp.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let binary = ''; const chunk = 0x8000;
+        for(let i=0;i<bytes.length;i+=chunk){ binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunk)); }
+        b64 = btoa(binary); break;
+      }catch(e){ /* url suivante */ }
+    }
+    _fontB64Cache[cacheKey] = b64;
+  }
+  if(b64){
+    try{
+      pdf.addFileToVFS(vfsName+'.ttf', b64);
+      pdf.addFont(vfsName+'.ttf', vfsName, 'normal');
+      pdf.setFont(vfsName, 'normal');
+      pdf.getTextWidth('Aa');   // valide que la police est exploitable (sinon jette)
+      return { name: vfsName, style: 'normal' };
+    }catch(e){ console.warn('Police intégrée inexploitable — repli sur Times.', e); }
+  }
+  console.warn('Police non chargée — repli sur Times.');
+  return { name: 'times', style: _builtinStyleOf(style) };
+}
+// Compat : police des descriptions de pièces.
+async function setupDescFont(pdf){ return ensureFont(pdf, textStyles.rooms, 'RoomFont'); }
+
+async function generatePDF(){
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true; const oldText = btn.textContent; btn.textContent = 'Génération en cours…';
+  try{
+    if(document.fonts){
+      const specs = [
+        '400 16px "Playfair Display"','500 16px "Playfair Display"','600 16px "Playfair Display"','700 16px "Playfair Display"',
+        'italic 500 16px "Playfair Display"','italic 400 16px "Playfair Display"',
+        '300 16px Lato','400 16px Lato','500 16px Lato','600 16px Lato',
+        '400 16px "Space Mono"','700 16px "Space Mono"'
+      ];
+      try{
+        await Promise.all(specs.map(s=>document.fonts.load(s)));
+        await document.fonts.ready;
+      } catch(e){ /* ignore font preload errors */ }
+    }
+    await new Promise(r=>setTimeout(r, 400));
+    const { jsPDF } = window.jspdf;
+    // === FICHE SUR UNE SEULE PAGE CONTINUE ===
+    // Couverture + photos des pièces + galerie sont empilées sur la MÊME page : aucune coupure de
+    // page, donc aucune bande blanche nulle part (ni entre page 1 et les photos, ni avant la galerie).
+    const _roomPageEl = document.querySelector('#roomPagesContainer .room-export-page');
+    const _galPageEl  = document.querySelector('#galleryPageContainer .room-export-page');
+    const coverH   = secOn('cover') ? 1123 : 0;
+    const roomsH   = (secOn('rooms') && _roomPageEl) ? (_roomPageEl._pageH || 1123) : 0;
+    const galleryH = (secOn('gallery') && _galPageEl) ? 1123 : 0;
+    const totalH = Math.max(1, coverH + roomsH + galleryH);
+    const pdf = new jsPDF({ unit:'px', format:[794, totalH], orientation: totalH < 794 ? 'landscape' : 'portrait', compress:true, hotfixes:['px_scaling'] });
+
+    // Intègre les polices choisies pour chaque élément (pièces, nom, description) — rendu identique à l'aperçu.
+    let descFontName = 'times', descFontStyle = 'italic';
+    try{
+      const df = await ensureFont(pdf, textStyles.rooms, 'RoomFont');
+      descFontName = df.name; descFontStyle = df.style;
+    }catch(e){ console.warn('Intégration police pièces échouée, repli Times', e); descFontName='times'; descFontStyle = _builtinStyleOf(textStyles.rooms); }
+    let nameFont = { name:'times', style:_builtinStyleOf(textStyles.name) };
+    try{ nameFont = await ensureFont(pdf, textStyles.name, 'NameFont'); }catch(e){ console.warn('Police nom échouée, repli Times', e); }
+    let cdescFont = { name:'times', style:_builtinStyleOf(textStyles.desc) };
+    try{ cdescFont = await ensureFont(pdf, textStyles.desc, 'CoverDescFont'); }catch(e){ console.warn('Police description échouée, repli Times', e); }
+    let tagFont = { name:'helvetica', style:_builtinStyleOf(textStyles.tagline) };
+    try{ tagFont = await ensureFont(pdf, textStyles.tagline, 'TagFont'); }catch(e){ console.warn('Police tagline échouée, repli Helvetica', e); }
+    let sdescFont = { name:'times', style:_builtinStyleOf(textStyles.descShort) };
+    try{ sdescFont = await ensureFont(pdf, textStyles.descShort, 'ShortFont'); }catch(e){ console.warn('Police desc. courte échouée, repli Times', e); }
+    const descRGB = hexToRgb(textStyles.rooms.color);
+    const descOpacity = (textStyles.rooms.opacity===undefined || isNaN(textStyles.rooms.opacity)) ? 1 : Math.max(0, Math.min(1, textStyles.rooms.opacity));
+
+    // Empilement continu : chaque section est dessinée à la suite, sur la même page (yCursor = position verticale).
+    let yCursor = 0;
+
+    if(secOn('cover')){
+    const p1 = document.getElementById('page1');
+    const heroEl = p1.querySelector('.hero');
+
+    const p1name = val('f-name') || 'Villa Sans Nom';
+    const p1loc = val('f-loc') || 'Localisation à préciser';
+    const p1region = val('f-region');
+    const p1locDisplay = p1region ? (p1loc + ', ' + p1region) : p1loc;
+    const p1tagline = val('f-tagline');
+    const p1desc = val('f-desc');
+    const p1guests = val('f-guests') || '–';
+    const p1bed = val('f-bed') || '–';
+    const p1bath = val('f-bath') || '–';
+    const p1surface = val('f-surface') ? val('f-surface') + 'm²' : '–';
+    const facts = secOn('facts');
+
+    // Couverture : photo plein cadre, infos (nom/localisation/chiffres) superposées en bas de la photo ;
+    // la description est dissociée, sur la bande en dessous.
+    const DS = textStyles.desc;
+    const SS = textStyles.descShort;
+    const p1descShort = val('f-desc-short');
+    pdf.setFont(cdescFont.name, cdescFont.style); pdf.setFontSize(DS.size);
+    const p1descLines = (p1desc && secOn('description')) ? pdf.splitTextToSize(p1desc, Math.max(200, DS.maxWidth||680)) : [];
+    const dLineH = Math.round(DS.size * (DS.lineHeight||1.85));
+    const dH = p1descLines.length * dLineH;
+    pdf.setFont(sdescFont.name, sdescFont.style); pdf.setFontSize(SS.size);
+    const p1shortLines = (p1descShort && secOn('description')) ? pdf.splitTextToSize(p1descShort, Math.max(200, SS.maxWidth||660)) : [];
+    const sLineH = Math.round(SS.size * (SS.lineHeight||1.5));
+    const sH = p1shortLines.length * sLineH;
+    const shortGap = (p1shortLines.length && p1descLines.length) ? 18 : 0;
+    const stripContentH = sH + shortGap + dH;
+    const descStripH = stripContentH ? (stripContentH + 50) : 0;
+    const photoBottom = Math.max(560, Math.min(1123 - descStripH, 1092));
+
+    const infoBottom = photoBottom - 26;
+    let statsNumY = 0, statsLblY = 0, locY, taglineY, nameY;
+    if(facts){ statsLblY = infoBottom; statsNumY = statsLblY - 16; locY = statsNumY - 50; }
+    else { locY = infoBottom; }
+    taglineY = p1tagline ? (locY - 16) : locY;
+    nameY = (p1tagline ? taglineY : locY) - 34;
+    const stripStartY = photoBottom + Math.max(18, (descStripH - stripContentH)/2) + 12;
+    const shortStartY = stripStartY;
+    const descStartY = stripStartY + sH + shortGap;
+
+    const prevFlex = heroEl.style.flex, prevH = heroEl.style.height;
+    heroEl.style.flex = 'none'; heroEl.style.height = photoBottom + 'px';
+    const heroTextEl = document.getElementById('p1-hero-text');
+    const statsBandEl = document.getElementById('p1-stats-band');
+    const bodyEl = document.getElementById('p1-body');
+    const prevVis = [heroTextEl.style.visibility, statsBandEl.style.visibility, bodyEl.style.visibility];
+    heroTextEl.style.visibility = 'hidden'; statsBandEl.style.visibility = 'hidden'; bodyEl.style.visibility = 'hidden';
+
+    const c1 = await html2canvas(p1, {scale:3, useCORS:true, backgroundColor:'#000000'});
+    pdf.addImage(c1.toDataURL('image/jpeg',1.0), 'JPEG', 0, 0, 794, 1123);
+
+    heroTextEl.style.visibility = prevVis[0]; statsBandEl.style.visibility = prevVis[1]; bodyEl.style.visibility = prevVis[2];
+    heroEl.style.flex = prevFlex; heroEl.style.height = prevH;
+
+    // Nom (police et style choisis dans « Nom de la villa »)
+    const NS = textStyles.name;
+    const nrgb = hexToRgb(NS.color);
+    pdf.setTextColor(nrgb[0], nrgb[1], nrgb[2]);
+    pdf.setFont(nameFont.name, nameFont.style); pdf.setFontSize(NS.size);
+    try{ pdf.setCharSpace(NS.spacing||0); }catch(e){}
+    pdf.text(p1name.toUpperCase(), 397, nameY, {align:'center'});
+    try{ pdf.setCharSpace(0); }catch(e){}
+    if(p1tagline){
+      const TS = textStyles.tagline;
+      const trgb = hexToRgb(TS.color);
+      pdf.setFont(tagFont.name, tagFont.style); pdf.setFontSize(TS.size); pdf.setTextColor(trgb[0], trgb[1], trgb[2]);
+      try{ pdf.setCharSpace(TS.spacing||0); }catch(e){}
+      pdf.text(p1tagline.toUpperCase(), 397, taglineY, {align:'center'});
+      try{ pdf.setCharSpace(0); }catch(e){}
+    }
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(10); pdf.setTextColor(221,208,181);
+    try{ pdf.setCharSpace(2.5); }catch(e){}
+    pdf.text(p1locDisplay.toUpperCase(), 397, locY, {align:'center'});
+    try{ pdf.setCharSpace(0); }catch(e){}
+
+    if(facts){
+      const statCols = [99, 297, 495, 693];
+      const statVals = [p1guests, p1bed, p1bath, p1surface];
+      const statLabels = ['VOYAGEURS','CHAMBRES','SDB','SURFACE'];
+      pdf.setFont('times','normal'); pdf.setFontSize(20); pdf.setTextColor(216,184,126);
+      statVals.forEach((v,i)=> pdf.text(String(v), statCols[i], statsNumY, {align:'center'}));
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(7); pdf.setTextColor(221,208,181);
+      try{ pdf.setCharSpace(1.5); }catch(e){}
+      statLabels.forEach((l,i)=> pdf.text(l, statCols[i], statsLblY, {align:'center'}));
+      try{ pdf.setCharSpace(0); }catch(e){}
+    }
+
+    if(p1shortLines.length){
+      const srgb = hexToRgb(SS.color);
+      pdf.setFont(sdescFont.name, sdescFont.style); pdf.setFontSize(SS.size); pdf.setTextColor(srgb[0], srgb[1], srgb[2]);
+      try{ pdf.setCharSpace(SS.spacing||0); }catch(e){}
+      let sy = shortStartY;
+      p1shortLines.forEach(line=>{ pdf.text(line, 397, sy, {align:'center'}); sy += sLineH; });
+      try{ pdf.setCharSpace(0); }catch(e){}
+    }
+    if(p1descLines.length){
+      const drgb = hexToRgb(DS.color);
+      pdf.setFont(cdescFont.name, cdescFont.style); pdf.setFontSize(DS.size); pdf.setTextColor(drgb[0], drgb[1], drgb[2]);
+      try{ pdf.setCharSpace(DS.spacing||0); }catch(e){}
+      let dy = descStartY;
+      p1descLines.forEach(line=>{ pdf.text(line, 397, dy, {align:'center'}); dy += dLineH; });
+      try{ pdf.setCharSpace(0); }catch(e){}
+    }
+    yCursor += coverH;
+    } // fin section Couverture
+
+    if(secOn('rooms')){
+    const roomsY = yCursor;
+    const roomPages = document.querySelectorAll('#roomPagesContainer .room-export-page');
+    for(const rp of roomPages){
+      // On masque le texte (display:none, toujours respecté par html2canvas) pour ne PAS le photographier...
+      const overlays = rp.querySelectorAll('.room-text-overlay');
+      overlays.forEach(o=> o.style.display = 'none');
+
+      const rpH = rp._pageH || 1123;
+      // Page continue potentiellement très haute → on limite l'échelle pour rester sous la taille max d'un canvas.
+      const rScale = Math.max(1, Math.min(3, Math.floor(16000 / Math.max(rpH, 1))));
+      const c = await html2canvas(rp, {scale:rScale, useCORS:true, backgroundColor:'#000000', onclone: async (doc)=>{ if(doc.fonts && doc.fonts.ready){ await doc.fonts.ready; } }});
+      pdf.addImage(c.toDataURL('image/jpeg',0.92), 'JPEG', 0, roomsY, 794, rpH);
+
+      overlays.forEach(o=> o.style.display = '');
+
+      // ...puis on ÉCRIT le texte dans le PDF en vectoriel (police Playfair intégrée) : net, sans chevauchement.
+      const layout = rp._roomLayout || [];
+      const slotH = rp._slotH || 1123;
+      const gap = rp._gap || 0;
+      const topOffset = rp._topOffset || 0;
+      const RS = textStyles.rooms;
+      const perPage = Math.max(piecesPerPage || 1, 1);
+      const nameFS = perPage===1 ? 11 : (perPage===2 ? 10 : 8.5);
+      const descFS = Math.max(4, RS.size || 13);
+      const padPx = perPage===1 ? 48 : 28;
+      const blockW = Math.max(60, Math.min(RS.maxWidth || 520, 794 - 2*padPx + 40));
+      const lineGap = descFS * (RS.lineHeight || 1.4);
+      const vShift = (RS.offsetY||0) + (RS.marginTop||0) - (RS.marginBottom||0);
+
+      layout.forEach((meta, i)=>{
+        const slotTop = roomsY + topOffset + i * (slotH + gap);
+        const centerY = slotTop + slotH * 0.40 + vShift;
+
+        let bp = RS.blockPos, al = RS.align;
+        if(bp === 'alt'){ const side = ((meta.gIdx||1) % 2 === 1) ? 'right' : 'left'; bp = side; al = side; }
+        let xLeft;
+        if(bp==='center') xLeft = 397 - blockW/2;
+        else if(bp==='right') xLeft = 794 - padPx - blockW;
+        else xLeft = padPx;
+        let tx, talign;
+        if(al==='center'){ tx = xLeft + blockW/2; talign = 'center'; }
+        else if(al==='right'){ tx = xLeft + blockW; talign = 'right'; }
+        else if(al==='justify'){ tx = xLeft; talign = 'justify'; }
+        else { tx = xLeft; talign = 'left'; }
+
+        pdf.setFont(descFontName, descFontStyle);
+        pdf.setFontSize(descFS);
+        try{ pdf.setCharSpace(RS.spacing || 0); }catch(e){}
+        const descLines = meta.desc ? pdf.splitTextToSize(meta.desc, blockW) : [];
+        const nameBlockH = meta.name ? (nameFS + 6) : 0;
+        const descBlockH = descLines.length * lineGap;
+        const totalH = nameBlockH + descBlockH;
+        let y = centerY - totalH/2 + nameFS;
+
+        if(meta.name){
+          try{ pdf.setCharSpace(0); }catch(e){}
+          pdf.setFont('helvetica','bold');
+          pdf.setFontSize(nameFS);
+          pdf.setTextColor(216,184,126);
+          const label = meta.name.toUpperCase() + (meta.subtitle ? ' — ' + meta.subtitle.toUpperCase() : '');
+          pdf.text(label, tx, y, {align: talign==='justify' ? 'left' : talign});
+          y += nameFS + 8;
+        }
+        if(descLines.length){
+          pdf.setFont(descFontName, descFontStyle);
+          pdf.setFontSize(descFS);
+          try{ pdf.setCharSpace(RS.spacing || 0); }catch(e){}
+          pdf.setTextColor(descRGB[0], descRGB[1], descRGB[2]);
+          let gs=false;
+          if(descOpacity < 1 && pdf.GState){ try{ pdf.setGState(new pdf.GState({opacity: descOpacity})); gs=true; }catch(e){} }
+          descLines.forEach(line=>{ pdf.text(line, tx, y, talign==='justify' ? {align:'justify', maxWidth:blockW} : {align:talign}); y += lineGap; });
+          if(gs){ try{ pdf.setGState(new pdf.GState({opacity:1})); }catch(e){} }
+        }
+      });
+      try{ pdf.setCharSpace(0); }catch(e){}
+    }
+    yCursor += roomsH;
+    } // fin section Pièces
+
+    if(secOn('gallery')){
+      const galPage = document.querySelector('#galleryPageContainer .room-export-page');
+      if(galPage){
+        const cg = await html2canvas(galPage, {scale:3, useCORS:true, backgroundColor:'#000000', onclone: async (doc)=>{ if(doc.fonts && doc.fonts.ready){ await doc.fonts.ready; } }});
+        pdf.addImage(cg.toDataURL('image/jpeg',1.0), 'JPEG', 0, yCursor, 794, galleryH);
+        yCursor += galleryH;
+      }
+    }
+
+    const name = val('f-name') || 'villa';
+    const filename = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'fiche-villa';
+    pdf.save(`${filename}.pdf`);
+  } catch(err){
+    console.error(err);
+    alert("Erreur lors de la génération du PDF :\n\n" + (err && err.message ? err.message : err) + "\n\n(Envoie cette erreur à ton assistant si elle réapparaît.)");
+  } finally {
+    btn.disabled = false; btn.textContent = oldText;
+  }
+}
+
+let AUTH_TOKEN = null;
+async function attemptLogin(){
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  document.getElementById('login-error').style.display = 'none';
+  try{
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: u, password: p })
+    });
+    const data = await res.json();
+    if(res.ok && data.token){
+      AUTH_TOKEN = data.token;
+      document.getElementById('loginGate').style.display = 'none';
+      try{ sessionStorage.setItem('atelierVillaToken', AUTH_TOKEN); } catch(e){}
+    } else {
+      document.getElementById('login-error').style.display = 'block';
+    }
+  } catch(e){
+    document.getElementById('login-error').textContent = 'Impossible de contacter le serveur.';
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
+function logout(){
+  AUTH_TOKEN = null;
+  try{ sessionStorage.removeItem('atelierVillaToken'); }catch(e){}
+  const g = document.getElementById('loginGate'); if(g) g.style.display = 'flex';
+  const pw = document.getElementById('login-pass'); if(pw) pw.value = '';
+  const er = document.getElementById('login-error'); if(er) er.style.display = 'none';
+}
+try{
+  const savedToken = sessionStorage.getItem('atelierVillaToken');
+  if(savedToken){
+    AUTH_TOKEN = savedToken;
+    document.getElementById('loginGate').style.display = 'none';
+  }
+} catch(e){}
+
+/* ---------- Zoom des aperçus (molette de la souris, pincement trackpad, ou boutons +/−) ---------- */
+const APP_VERSION = 'v2026-07-16-AJ';
+console.log('Atelier Villa '+APP_VERSION+' chargee.');
+const PREVIEW_MIN = 0.35, PREVIEW_MAX = 1.7, PREVIEW_BASE = 0.62;
+let previewScale = PREVIEW_BASE;
+function applyPreviewScale(){
+  previewScale = Math.min(PREVIEW_MAX, Math.max(PREVIEW_MIN, previewScale));
+  document.documentElement.style.setProperty('--preview-scale', previewScale.toFixed(3));
+  const el = document.getElementById('zoomVal');
+  if(el) el.textContent = Math.round(previewScale*100) + '%';
+}
+function stepPreviewZoom(dir){ previewScale += dir * 0.1; applyPreviewScale(); }
+function resetPreviewZoom(){ previewScale = PREVIEW_BASE; applyPreviewScale(); }
+
+initAmenities();
+renderThumbs();
+seedDefaultRooms();
+renderRooms();
+renderSections();
+renderLogoGallery();
+renderSectionVis();
+render();
+applyPreviewScale();
+applyTextStyle();
+</script>
+</body>
+</html>
